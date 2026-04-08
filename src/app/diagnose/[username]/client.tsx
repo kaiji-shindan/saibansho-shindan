@@ -370,7 +370,51 @@ export function DiagnoseClient({ username }: { username: string }) {
           </p>
         </div>
 
-        {/* ===== 2.5 Fact-based behavior data ===== */}
+        {/* ===== 3. Category — 法的根拠を見せる ===== */}
+        <div className="mt-3 rounded-2xl border border-border bg-white p-4 sm:p-5">
+          <h3 className="text-xs font-bold">該当する可能性のある法令</h3>
+          <p className="mt-1 text-[10px] text-text-muted">※ 当サービスによる独自分類であり、法的判断ではありません</p>
+          <div className="mt-3 space-y-2.5">
+            {result.categories.map((cat) => {
+              const pct = result.problemPosts > 0 ? (cat.count / result.problemPosts) * 100 : 0;
+              return (
+                <div key={cat.name} className="flex items-center gap-3">
+                  <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${cat.bg}`}>
+                    <cat.icon className={`h-4 w-4 ${cat.color}`} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold">{cat.name}</span>
+                      <span className={`text-xs font-bold ${cat.color}`}>{cat.count}件</span>
+                    </div>
+                    <div className="mt-1 h-2 overflow-hidden rounded-full bg-surface-2">
+                      <div className="h-full rounded-full animate-fill-bar"
+                        style={{ width: `${pct}%`, backgroundColor: cat.color.includes("red") ? "#fca5a5" : cat.color.includes("amber") ? "#fcd34d" : cat.color.includes("violet") ? "#c4b5fd" : "#93c5fd" }} />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ===== 4. Urgency banner — 恐怖を煽る ===== */}
+        <div className="mt-3 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 p-4">
+          <div className="flex gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-amber-900">投稿が削除されると証拠が消滅します</p>
+              <p className="mt-1 text-[11px] leading-relaxed text-amber-700">
+                相手が投稿を削除すると、開示請求に必要な証拠が失われます。
+                スクリーンショットの自動保全で証拠を確保しましょう。
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* ===== 2.5 Fact-based behavior data (moved here) ===== */}
         <div className="mt-3 rounded-2xl border border-border bg-white p-4 sm:p-5">
           <h3 className="text-xs font-bold">投稿行動データ</h3>
 
@@ -442,70 +486,63 @@ export function DiagnoseClient({ username }: { username: string }) {
           </div>
         </div>
 
-        {/* ===== 3. Category — 法的根拠を見せる ===== */}
-        <div className="mt-3 rounded-2xl border border-border bg-white p-4 sm:p-5">
-          <h3 className="text-xs font-bold">該当する可能性のある法令</h3>
-          <p className="mt-1 text-[10px] text-text-muted">※ 当サービスによる独自分類であり、法的判断ではありません</p>
-          <div className="mt-3 space-y-2.5">
-            {result.categories.map((cat) => {
-              const pct = result.problemPosts > 0 ? (cat.count / result.problemPosts) * 100 : 0;
-              return (
-                <div key={cat.name} className="flex items-center gap-3">
-                  <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${cat.bg}`}>
-                    <cat.icon className={`h-4 w-4 ${cat.color}`} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold">{cat.name}</span>
-                      <span className={`text-xs font-bold ${cat.color}`}>{cat.count}件</span>
-                    </div>
-                    <div className="mt-1 h-2 overflow-hidden rounded-full bg-surface-2">
-                      <div className="h-full rounded-full animate-fill-bar"
-                        style={{ width: `${pct}%`, backgroundColor: cat.color.includes("red") ? "#fca5a5" : cat.color.includes("amber") ? "#fcd34d" : cat.color.includes("violet") ? "#c4b5fd" : "#93c5fd" }} />
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* ===== 4. Urgency banner — 恐怖を煽る ===== */}
-        <div className="mt-3 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 p-4">
-          <div className="flex gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100">
-              <AlertTriangle className="h-4 w-4 text-amber-600" />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-amber-900">投稿が削除されると証拠が消滅します</p>
-              <p className="mt-1 text-[11px] leading-relaxed text-amber-700">
-                相手が投稿を削除すると、開示請求に必要な証拠が失われます。
-                スクリーンショットの自動保全で証拠を確保しましょう。
-              </p>
-            </div>
-          </div>
-        </div>
-
         {/* ===== 5. Premium lock — 証拠保全で課金 ===== */}
         <div className="mt-3 relative overflow-hidden rounded-2xl border border-violet-200 bg-white p-4 sm:p-5">
-          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/90 backdrop-blur-[1px]">
-            <Lock className="h-6 w-6 text-violet-400" />
-            <p className="mt-2 text-sm font-bold">証拠保全 & 全件レポート</p>
+          {/* Blurred preview content showing what's inside */}
+          <div className="space-y-3 blur-[5px] select-none pointer-events-none" aria-hidden>
+            <div className="rounded-xl border border-border bg-surface p-3">
+              <div className="flex items-center gap-2">
+                <div className="h-6 w-6 rounded-full bg-gradient-to-br from-red-300 to-rose-300" />
+                <div className="flex-1">
+                  <p className="text-[11px] font-bold text-text-sub">問題投稿 #001 — 名誉毀損の疑い</p>
+                  <p className="text-[9px] text-text-muted">2025-11-12 23:14 ・ いいね 47 ・ RT 12</p>
+                </div>
+                <span className="rounded bg-red-100 px-1.5 py-0.5 text-[9px] font-bold text-red-600">高</span>
+              </div>
+              <p className="mt-2 rounded-lg bg-white p-2 text-[10px] leading-relaxed text-text-sub">
+                ◯◯は本当に最低なクズ野郎で、こういう人間は社会から消えるべきだと思う。家族ごと不幸になればいい
+              </p>
+              <div className="mt-2 flex gap-1.5">
+                <span className="rounded border border-violet-200 bg-violet-50 px-1.5 py-0.5 text-[9px] font-bold text-violet-700">📸 スクショ保全済</span>
+                <span className="rounded border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 text-[9px] font-bold text-indigo-700">⚖️ 刑法230条</span>
+              </div>
+            </div>
+            <div className="rounded-xl border border-border bg-surface p-3">
+              <div className="flex items-center gap-2">
+                <div className="h-6 w-6 rounded-full bg-gradient-to-br from-amber-300 to-orange-300" />
+                <div className="flex-1">
+                  <p className="text-[11px] font-bold text-text-sub">問題投稿 #002 — 侮辱罪の疑い</p>
+                  <p className="text-[9px] text-text-muted">2025-11-09 18:42 ・ いいね 23 ・ RT 5</p>
+                </div>
+                <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-600">中</span>
+              </div>
+              <p className="mt-2 rounded-lg bg-white p-2 text-[10px] leading-relaxed text-text-sub">
+                ◯◯のツラ見るたびに虫唾が走るんだよな、ほんとブスだし喋り方もキモい。生理的に無理
+              </p>
+              <div className="mt-2 flex gap-1.5">
+                <span className="rounded border border-violet-200 bg-violet-50 px-1.5 py-0.5 text-[9px] font-bold text-violet-700">📸 スクショ保全済</span>
+                <span className="rounded border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 text-[9px] font-bold text-indigo-700">⚖️ 刑法231条</span>
+              </div>
+            </div>
+            <div className="rounded-xl border border-border bg-surface p-3">
+              <p className="text-[11px] font-bold text-text-sub">📄 開示請求テンプレート（PDF）</p>
+              <p className="mt-1 text-[10px] text-text-muted">弁護士監修・氏名と日付を入れるだけで提出可能</p>
+            </div>
+          </div>
+
+          {/* Lock overlay */}
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-gradient-to-b from-white/70 via-white/85 to-white/95">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-400 to-indigo-400 shadow-lg shadow-violet-300/40">
+              <Lock className="h-5 w-5 text-white" />
+            </div>
+            <p className="mt-3 text-sm font-bold">証拠保全 & 全件レポート</p>
             <p className="mt-1 text-center text-[11px] text-text-muted">
               問題投稿のスクリーンショット自動保存<br />開示請求テンプレート・弁護士相談
             </p>
             <button className="mt-4 rounded-xl bg-gradient-to-r from-violet-400 to-indigo-400 px-7 py-3 text-sm font-bold text-white shadow-lg shadow-violet-400/25 hover:from-violet-500 hover:to-indigo-500 active:scale-[0.97]">
               月額500円で証拠を保全する
             </button>
-          </div>
-          <div className="space-y-3 opacity-20">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="rounded-xl bg-surface p-4">
-                <div className="shimmer h-3 w-20 rounded" />
-                <div className="shimmer mt-2 h-3 w-full rounded" />
-                <div className="shimmer mt-1.5 h-3 w-2/3 rounded" />
-              </div>
-            ))}
+            <p className="mt-2 text-[10px] text-text-muted">↑ ぼかしの中身がすべて閲覧可能に</p>
           </div>
         </div>
 
@@ -514,26 +551,51 @@ export function DiagnoseClient({ username }: { username: string }) {
           <h3 className="text-xs font-bold">開示請求すると相手はどうなるか</h3>
           <p className="mt-1 text-[10px] text-text-muted">※ 一般的な法的手続きの流れに基づく情報です</p>
 
-          <div className="mt-3 space-y-2">
+          <div className="mt-4 grid grid-cols-2 gap-2">
             {[
-              { icon: "👤", label: "身元が特定される", desc: "氏名・住所がプロバイダから開示。匿名の盾が完全に外れる", severity: "high" },
-              { icon: "💰", label: "慰謝料を支払う", desc: "名誉毀損の場合30〜100万円。悪質なケースではそれ以上", severity: "high" },
-              { icon: "🏢", label: "職場・学校に知られる", desc: "身元特定後、勤務先や学校に事実が伝わるリスク", severity: "high" },
-              { icon: "⚖️", label: "前科がつく可能性", desc: "脅迫・名誉毀損は刑事告訴も可能。侮辱罪は懲役刑あり（2022年厳罰化）", severity: "high" },
-              { icon: "📄", label: "裁判記録が残る", desc: "判決は公開情報。ネット上に名前が残る可能性", severity: "mid" },
-              { icon: "💸", label: "防御費用がかかる", desc: "自身も弁護士を雇って対応する必要がある", severity: "mid" },
-            ].map((item) => (
-              <div key={item.label} className={`flex items-start gap-3 rounded-xl p-3 ${item.severity === "high" ? "border border-red-100 bg-red-50/50" : "bg-surface"}`}>
-                <span className="mt-0.5 text-base">{item.icon}</span>
-                <div>
-                  <p className={`text-[11px] font-bold ${item.severity === "high" ? "text-red-700" : "text-text-sub"}`}>{item.label}</p>
-                  <p className="mt-0.5 text-[10px] leading-relaxed text-text-muted">{item.desc}</p>
+              { icon: "👤", label: "身元が特定", desc: "氏名・住所が\nプロバイダから開示", badge: "確定", tone: "red" },
+              { icon: "💰", label: "慰謝料の支払い", desc: "名誉毀損で\n30〜100万円", badge: "高額", tone: "red" },
+              { icon: "🏢", label: "職場・学校に発覚", desc: "勤務先や学校に\n事実が伝わる", badge: "社会的", tone: "red" },
+              { icon: "⚖️", label: "前科がつく", desc: "侮辱罪は懲役刑あり\n（2022年厳罰化）", badge: "刑事", tone: "red" },
+              { icon: "📄", label: "裁判記録が残る", desc: "判決は公開情報\nネットに名前が残る", badge: "永続", tone: "amber" },
+              { icon: "💸", label: "防御費用が発生", desc: "自身も弁護士を\n雇う必要あり", badge: "出費", tone: "amber" },
+            ].map((item) => {
+              const isRed = item.tone === "red";
+              return (
+                <div
+                  key={item.label}
+                  className={`relative overflow-hidden rounded-xl border p-3 ${
+                    isRed
+                      ? "border-red-200 bg-gradient-to-br from-red-50 to-rose-50/40"
+                      : "border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50/40"
+                  }`}
+                >
+                  <span
+                    className={`absolute right-2 top-2 rounded px-1.5 py-0.5 text-[9px] font-bold ${
+                      isRed ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"
+                    }`}
+                  >
+                    {item.badge}
+                  </span>
+                  <div
+                    className={`flex h-8 w-8 items-center justify-center rounded-lg text-base ${
+                      isRed ? "bg-white/80" : "bg-white/80"
+                    }`}
+                  >
+                    {item.icon}
+                  </div>
+                  <p className={`mt-2 text-[11px] font-bold ${isRed ? "text-red-800" : "text-amber-900"}`}>
+                    {item.label}
+                  </p>
+                  <p className="mt-1 whitespace-pre-line text-[10px] leading-relaxed text-text-muted">
+                    {item.desc}
+                  </p>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
-          <div className="mt-3 rounded-lg bg-indigo-50 border border-indigo-100 p-3">
+          <div className="mt-4 rounded-xl bg-gradient-to-r from-indigo-50 to-violet-50 border border-indigo-100 p-3 text-center">
             <p className="text-[11px] font-bold text-indigo-900">
               あなたが行動すれば、匿名の加害者に法的責任を取らせることができます
             </p>
