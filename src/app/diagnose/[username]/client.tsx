@@ -593,9 +593,12 @@ export function DiagnoseClient({ username }: { username: string }) {
             <p className="mt-2 text-center text-sm leading-relaxed text-text-muted">
               問題投稿のスクリーンショット自動保存<br />開示請求テンプレート・弁護士相談
             </p>
-            <button className="mt-5 rounded-2xl bg-gradient-to-r from-violet-400 to-indigo-400 px-8 py-4 text-base font-extrabold text-white shadow-xl shadow-violet-400/30 hover:from-violet-500 hover:to-indigo-500 active:scale-[0.97]">
+            <a
+              href={`/diagnose/${username}/premium`}
+              className="mt-5 rounded-2xl bg-gradient-to-r from-violet-400 to-indigo-400 px-8 py-4 text-base font-extrabold text-white shadow-xl shadow-violet-400/30 hover:from-violet-500 hover:to-indigo-500 active:scale-[0.97]"
+            >
               月額500円で証拠を保全する
-            </button>
+            </a>
             <p className="mt-3 text-xs font-medium text-text-muted">↑ ぼかしの中身がすべて閲覧可能に</p>
           </div>
         </div>

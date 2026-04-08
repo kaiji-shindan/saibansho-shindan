@@ -118,6 +118,7 @@ export function buildDiagnosis(
     mentionedUsers,
     hostileKeywords,
     monthlyProblemPosts: monthly,
+    evidence: classified.filter((c) => c.severity !== "none"),
     source: "x-api+claude",
     analyzedAt: new Date().toISOString(),
   };

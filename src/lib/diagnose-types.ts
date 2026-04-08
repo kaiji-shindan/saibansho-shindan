@@ -42,6 +42,9 @@ export interface DiagnosisData {
   mentionedUsers: { handle: string; count: number }[];
   hostileKeywords: { word: string; count: number }[];
   monthlyProblemPosts: { month: string; count: number }[];
+  /** Full evidence list — every classified tweet with severity/category/law.
+   *  Used by the premium (post-payment) view. */
+  evidence: ClassifiedTweet[];
   /** "x-api+claude" | "mock" — for the UI to show data source */
   source: "x-api+claude" | "mock";
   /** ISO timestamp of analysis */
