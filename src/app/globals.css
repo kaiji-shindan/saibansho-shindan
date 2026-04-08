@@ -40,6 +40,20 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  /* Japanese-aware line breaking: break at phrase boundaries (文節) */
+  word-break: auto-phrase;
+  line-break: strict;
+  overflow-wrap: anywhere;
+}
+
+/* Headings: balance line lengths so titles don't leave a single orphan word */
+h1, h2, h3, h4 {
+  text-wrap: balance;
+}
+
+/* Paragraphs: avoid orphans / awkward last-line breaks */
+p {
+  text-wrap: pretty;
 }
 
 /* iOS safe area helpers */

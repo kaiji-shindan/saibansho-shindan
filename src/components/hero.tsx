@@ -111,9 +111,10 @@ export function Hero() {
           className="animate-slide-up text-4xl font-extrabold leading-[1.15] tracking-tight text-white sm:text-5xl lg:text-6xl"
           style={{ animationDelay: "0.1s", opacity: 0 }}
         >
-          その誹謗中傷、
-          <br />
-          <span className="bg-gradient-to-r from-violet-300 via-indigo-300 to-blue-300 bg-clip-text text-transparent">開示請求</span>かも？
+          <span className="inline-block">その誹謗中傷、</span>
+          <span className="inline-block">
+            <span className="bg-gradient-to-r from-violet-300 via-indigo-300 to-blue-300 bg-clip-text text-transparent">開示請求</span>かも？
+          </span>
         </h1>
 
         {/* Subtitle */}
