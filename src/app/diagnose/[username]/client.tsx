@@ -24,6 +24,28 @@ import {
 import { AccountProfileCard, generateMockProfile, type AccountProfile } from "@/components/account-profile";
 import { AccountAnalysisCard, generateMockAnalysis, type AccountAnalysis } from "@/components/account-analysis";
 import { parseUsername } from "@/lib/parse-username";
+import type { DiagnosisData, CategoryName } from "@/lib/diagnose-types";
+
+// Map category names → icon/color metadata for the client UI.
+// (The API returns category names only; the client hydrates icons.)
+const CATEGORY_META: Record<CategoryName, { icon: typeof AlertTriangle; color: string; bg: string; border: string }> = {
+  "名誉毀損":         { icon: AlertTriangle,        color: "text-red-500",    bg: "bg-red-50",    border: "border-red-100" },
+  "侮辱":             { icon: MessageSquareWarning, color: "text-amber-500",  bg: "bg-amber-50",  border: "border-amber-100" },
+  "脅迫":             { icon: ShieldAlert,          color: "text-violet-500", bg: "bg-violet-50", border: "border-violet-100" },
+  "プライバシー侵害": { icon: Eye,                  color: "text-blue-500",   bg: "bg-blue-50",   border: "border-blue-100" },
+};
+
+/** Convert the JSON-safe DiagnosisData from the API into the icon-rich shape the UI expects. */
+function hydrateDiagnosis(data: DiagnosisData): DiagnosisResult {
+  return {
+    ...data,
+    categories: data.categories.map((c) => ({
+      name: c.name,
+      count: c.count,
+      ...CATEGORY_META[c.name],
+    })),
+  } as DiagnosisResult;
+}
 
 // ============================================================
 // Types
@@ -198,13 +220,42 @@ export function DiagnoseClient({ username }: { username: string }) {
   const [newUsername, setNewUsername] = useState("");
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setResult(generateMockResult(username));
-      setProfile(generateMockProfile(username));
-      setAnalysis(generateMockAnalysis(username));
-      setPhase("result");
-    }, 2500);
-    return () => clearTimeout(timer);
+    let cancelled = false;
+    const startedAt = Date.now();
+
+    (async () => {
+      let hydrated: DiagnosisResult | null = null;
+
+      try {
+        const res = await fetch(`/api/diagnose/${encodeURIComponent(username)}`);
+        const json = (await res.json()) as { ok: boolean; data?: DiagnosisData; error?: string };
+        if (json.ok && json.data) {
+          hydrated = hydrateDiagnosis(json.data);
+        } else {
+          console.warn("[diagnose] API failed, using mock:", json.error);
+        }
+      } catch (err) {
+        console.warn("[diagnose] fetch error, using mock:", err);
+      }
+
+      // Fallback to local mock so the UI always renders something
+      if (!hydrated) hydrated = generateMockResult(username);
+
+      // Keep loading screen visible for at least 2.5s for UX
+      const elapsed = Date.now() - startedAt;
+      const remaining = Math.max(0, 2500 - elapsed);
+      setTimeout(() => {
+        if (cancelled) return;
+        setResult(hydrated);
+        setProfile(generateMockProfile(username));
+        setAnalysis(generateMockAnalysis(username));
+        setPhase("result");
+      }, remaining);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [username]);
 
   const handleNewSearch = (e: React.FormEvent) => {
