@@ -4,7 +4,12 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import {
   ArrowLeft,
-  BadgeCheck,
+  AlertTriangle,
+  MessageSquareWarning,
+  ShieldAlert,
+  Eye,
+  User,
+  Clock,
   Camera,
   Download,
   FileText,
@@ -17,15 +22,89 @@ import {
   ShieldCheck,
   ExternalLink,
   Loader2,
+  BadgeCheck,
 } from "lucide-react";
-import type { DiagnosisData, ClassifiedTweet, Severity } from "@/lib/diagnose-types";
+import type { DiagnosisData, ClassifiedTweet, Severity, Level, CategoryName } from "@/lib/diagnose-types";
 import { AccountProfileCard, generateMockProfile, type AccountProfile } from "@/components/account-profile";
 
 // ============================================================
-// Templates — wording reflects post-launch lawyer-supervised state.
-// All documents will be reviewed and signed off by the affiliated
-// law firm before public release.
+// Local UI building blocks (mirrors the diagnose result page)
 // ============================================================
+const levelConfig: Record<
+  Level,
+  { label: string; color: string; gradient: string; desc: string }
+> = {
+  S: { label: "極めて高い", color: "text-red-600",     gradient: "from-red-500 to-rose-600",    desc: "即座に弁護士への相談を推奨します。" },
+  A: { label: "かなり高い", color: "text-orange-600",  gradient: "from-orange-400 to-orange-500", desc: "複数の法令に抵触する可能性があります。" },
+  B: { label: "高い",       color: "text-amber-600",   gradient: "from-amber-400 to-amber-500",  desc: "法的措置の対象となりうる投稿が見つかりました。" },
+  C: { label: "やや高い",   color: "text-yellow-600",  gradient: "from-yellow-400 to-yellow-500", desc: "問題のある投稿がいくつか見つかりました。" },
+  D: { label: "低い",       color: "text-blue-600",    gradient: "from-blue-400 to-blue-500",    desc: "注意が必要な投稿が一部あります。" },
+  E: { label: "非常に低い", color: "text-emerald-600", gradient: "from-emerald-400 to-emerald-500", desc: "法的に問題のある投稿はほとんどありません。" },
+};
+
+const CATEGORY_META: Record<CategoryName, { icon: typeof AlertTriangle; color: string; bg: string }> = {
+  "名誉毀損":         { icon: AlertTriangle,        color: "text-red-500",    bg: "bg-red-50" },
+  "侮辱":             { icon: MessageSquareWarning, color: "text-amber-500",  bg: "bg-amber-50" },
+  "脅迫":             { icon: ShieldAlert,          color: "text-violet-500", bg: "bg-violet-50" },
+  "プライバシー侵害": { icon: Eye,                  color: "text-blue-500",   bg: "bg-blue-50" },
+};
+
+const severityStyle: Record<Severity, { label: string; bg: string; text: string; border: string; dot: string }> = {
+  high:   { label: "高", bg: "bg-red-100",   text: "text-red-700",   border: "border-red-200",   dot: "bg-red-400" },
+  medium: { label: "中", bg: "bg-amber-100", text: "text-amber-700", border: "border-amber-200", dot: "bg-amber-400" },
+  low:    { label: "低", bg: "bg-slate-100", text: "text-slate-700", border: "border-slate-200", dot: "bg-slate-400" },
+};
+
+function Avatar({ username, size = 48 }: { username: string; size?: number }) {
+  const [err, setErr] = useState(false);
+  if (err) {
+    return (
+      <div className="flex items-center justify-center rounded-full bg-gradient-to-br from-violet-100 to-indigo-100" style={{ width: size, height: size }}>
+        <User className="text-violet-400" style={{ width: size * 0.45, height: size * 0.45 }} />
+      </div>
+    );
+  }
+  return (
+    <Image
+      src={`https://unavatar.io/x/${username}`}
+      alt={`@${username}`}
+      width={size}
+      height={size}
+      className="rounded-full object-cover ring-2 ring-white shadow-md"
+      onError={() => setErr(true)}
+      unoptimized
+    />
+  );
+}
+
+function ScoreRing({ score, size: SIZE = 124 }: { score: number; size?: number }) {
+  const STROKE = 9;
+  const radius = (SIZE - STROKE) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (score / 100) * circumference;
+
+  return (
+    <div className="relative flex items-center justify-center" style={{ width: SIZE, height: SIZE }}>
+      <svg className="absolute -rotate-90" width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
+        <circle cx={SIZE / 2} cy={SIZE / 2} r={radius} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={STROKE} />
+        <circle cx={SIZE / 2} cy={SIZE / 2} r={radius} fill="none" stroke="url(#prScoreGrad)" strokeWidth={STROKE}
+          strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={offset}
+          style={{ transition: "stroke-dashoffset 1.5s ease-out" }} />
+        <defs>
+          <linearGradient id="prScoreGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#a78bfa" />
+            <stop offset="100%" stopColor="#818cf8" />
+          </linearGradient>
+        </defs>
+      </svg>
+      <div className="text-center text-white">
+        <p className="text-4xl font-black leading-none tracking-tight">{score}</p>
+        <p className="mt-0.5 text-[10px] font-semibold tracking-wider text-slate-500">/100</p>
+      </div>
+    </div>
+  );
+}
+
 const TEMPLATES = [
   { title: "発信者情報開示請求書（参考フォーマット）", desc: "提携弁護士事務所による監修予定", size: "PDF" },
   { title: "損害賠償請求書（参考フォーマット）", desc: "氏名・日付の記入欄付き", size: "PDF" },
@@ -33,14 +112,8 @@ const TEMPLATES = [
   { title: "刑事告訴状（参考フォーマット）", desc: "警察署提出用の記入例付き", size: "PDF" },
 ];
 
-const SEVERITY_STYLE: Record<Severity, { label: string; bg: string; text: string; border: string }> = {
-  high:   { label: "高", bg: "bg-red-100",   text: "text-red-700",   border: "border-red-200" },
-  medium: { label: "中", bg: "bg-amber-100", text: "text-amber-700", border: "border-amber-200" },
-  low:    { label: "低", bg: "bg-slate-100", text: "text-slate-700", border: "border-slate-200" },
-};
-
 // ============================================================
-// Page
+// Main component
 // ============================================================
 export function PremiumClient({ username }: { username: string }) {
   const [data, setData] = useState<DiagnosisData | null>(null);
@@ -94,7 +167,9 @@ export function PremiumClient({ username }: { username: string }) {
     );
   }
 
+  const lc = levelConfig[data.level];
   const evidence = data.evidence ?? [];
+  const problemRate = data.totalPosts > 0 ? ((data.problemPosts / data.totalPosts) * 100).toFixed(1) : "0.0";
   const nextBilling = (() => {
     const d = new Date();
     d.setMonth(d.getMonth() + 1);
@@ -102,107 +177,212 @@ export function PremiumClient({ username }: { username: string }) {
   })();
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-b from-violet-50/40 via-white to-white">
-      {/* ===== Header ===== */}
-      <header className="safe-pt sticky top-0 z-20 border-b border-violet-100 bg-white/85 backdrop-blur-md">
-        <div className="mx-auto flex max-w-2xl items-center justify-between px-5 py-3 sm:px-6">
-          <a href={`/diagnose/${username}`} className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-white text-text-sub active:scale-[0.96]">
+    <div className="min-h-screen bg-surface">
+      {/* ===== Top bar ===== */}
+      <div className="safe-pt sticky top-0 z-40 border-b border-border bg-white/85 backdrop-blur-xl">
+        <div className="mx-auto flex h-12 sm:h-14 max-w-2xl items-center justify-between px-3 sm:px-5">
+          <a href={`/diagnose/${username}`} className="flex items-center gap-1.5 text-sm text-text-sub hover:text-foreground">
             <ArrowLeft className="h-4 w-4" />
+            戻る
           </a>
-          <div className="flex items-center gap-2">
-            <Image src="/logo_icon.png" alt="ロゴ" width={24} height={24} />
-            <span className="text-[14px] font-extrabold tracking-tight">
-              開示請求<span className="text-gradient-blue">診断</span>
-            </span>
+          <div className="flex items-center gap-1.5">
+            <Image src="/logo_icon.png" alt="ロゴ" width={22} height={22} />
+            <span className="text-sm font-extrabold">開示請求<span className="text-gradient-blue">診断</span></span>
           </div>
-          <span className="inline-flex h-9 items-center gap-1 rounded-full border border-violet-200 bg-violet-50 px-3 text-[11px] font-bold text-violet-700">
+          <span className="inline-flex h-8 items-center gap-1 rounded-full border border-violet-200 bg-violet-50 px-2.5 text-[11px] font-bold text-violet-700">
             <Sparkles className="h-3 w-3" />
             PRO
           </span>
         </div>
-      </header>
+      </div>
 
-      <main className="mx-auto max-w-2xl px-5 pt-5 pb-16 sm:px-6">
-        {/* ===== 0. Account profile (first view) ===== */}
-        {profile && (
-          <section className="mb-5">
-            <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-violet-600">分析対象アカウント</p>
-            <AccountProfileCard profile={profile} />
-          </section>
-        )}
+      <div className="mx-auto max-w-2xl px-5 py-6 sm:py-8">
+        {/* ===== 1. Verdict Hero (matches diagnose result page) ===== */}
+        <div className="animate-bounce-in overflow-hidden rounded-3xl bg-gradient-to-br from-[#10102a] via-[#141438] to-[#1a1a45] p-5 sm:p-7 text-white">
+          {/* Top row: user + level badge */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Avatar username={data.username} size={44} />
+              <div>
+                <p className="text-base font-extrabold leading-tight">@{data.username}</p>
+                <p className="text-xs text-slate-500">{new Date().toLocaleDateString("ja-JP")}</p>
+              </div>
+            </div>
+            <span className={`flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${lc.gradient} text-2xl font-black shadow-lg shadow-black/20`}>
+              {data.level}
+            </span>
+          </div>
 
-        {/* ===== 1. Activation banner ===== */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-violet-500 via-indigo-500 to-blue-500 p-5 text-white shadow-[0_20px_50px_-12px_rgba(124,58,237,0.45)] sm:p-6">
-          <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-3xl" />
-          <div className="absolute -bottom-12 -left-8 h-40 w-40 rounded-full bg-white/10 blur-3xl" />
-          <div className="relative">
-            <div className="flex items-center gap-2">
-              <BadgeCheck className="h-5 w-5" />
-              <span className="text-[12px] font-bold uppercase tracking-widest text-white/90">プレミアムプラン有効</span>
+          {/* PRO ribbon */}
+          <div className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-violet-300/30 bg-violet-500/15 px-3 py-1 text-[11px] font-bold text-violet-200">
+            <BadgeCheck className="h-3 w-3" />
+            プレミアム会員 — 全件レポート閲覧可
+          </div>
+
+          {/* Score + Level */}
+          <div className="mt-5 flex flex-col items-center gap-5 sm:flex-row sm:items-center sm:gap-6">
+            <div className="shrink-0">
+              <ScoreRing score={data.score} />
             </div>
-            <h1 className="mt-3 text-[24px] font-extrabold leading-tight tracking-tight sm:text-[28px]">
-              証拠保全 & 全件レポートが
-              <br />
-              すべて閲覧可能になりました
-            </h1>
-            <p className="mt-2.5 text-[13px] leading-relaxed text-white/85 sm:text-sm">
-              @{data.username} の分析結果はロックが解除されました。証拠の保全・PDF出力・弁護士相談がご利用いただけます。
-            </p>
-            <div className="mt-5 flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-[11px] font-bold backdrop-blur-sm">
-                <Calendar className="h-3 w-3" /> 次回更新 {nextBilling}
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-[11px] font-bold backdrop-blur-sm">
-                <CreditCard className="h-3 w-3" /> ¥500 / 月
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-[11px] font-bold backdrop-blur-sm">
-                {data.source === "x-api+claude" ? "● 実データ分析" : "● デモデータ"}
-              </span>
+            <div className="flex-1 min-w-0 text-center sm:text-left">
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">開示請求レベル</p>
+              <p className={`mt-1 text-3xl sm:text-4xl font-black leading-tight tracking-tight ${lc.color}`}>{lc.label}</p>
+              <p className="mt-2 text-sm leading-relaxed text-slate-400">{lc.desc}</p>
             </div>
+          </div>
+
+          {/* Stats */}
+          <div className="mt-6 grid grid-cols-3 gap-2">
+            {[
+              { value: data.totalPosts, label: "分析投稿", color: "text-blue-300" },
+              { value: data.problemPosts, label: "問題投稿", color: "text-red-300" },
+              { value: `${problemRate}%`, label: "問題率", color: "text-amber-300" },
+            ].map((s) => (
+              <div key={s.label} className="rounded-xl bg-white/[0.05] px-3 py-3 text-center">
+                <p className={`text-xl font-black tracking-tight ${s.color}`}>{s.value}</p>
+                <p className="mt-1 text-[10px] font-medium text-slate-500">{s.label}</p>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* ===== 2. Result summary ===== */}
-        <section className="mt-5 rounded-3xl border border-border bg-white p-5 shadow-[0_4px_24px_-8px_rgba(15,23,42,0.06)] sm:p-6">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-red-500 to-rose-500 text-xl font-black text-white shadow-lg shadow-red-500/30">
-              {data.level}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="truncate text-[12px] font-semibold text-text-muted">@{data.username}</p>
-              <p className="text-[16px] font-extrabold tracking-tight">開示請求リスク {data.level}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-[10px] font-bold uppercase text-text-muted">スコア</p>
-              <p className="text-2xl font-black text-red-500">{data.score}</p>
-            </div>
+        {/* ===== 2. Categories — same as result ===== */}
+        <div className="mt-5 rounded-2xl border border-border bg-white p-5 sm:p-6">
+          <h3 className="text-base sm:text-lg font-extrabold tracking-tight">該当する可能性のある法令</h3>
+          <p className="mt-1.5 text-xs text-text-muted">※ 当サービスによる独自分類であり、法的判断ではありません</p>
+          <div className="mt-5 space-y-4">
+            {data.categories.map((cat) => {
+              const meta = CATEGORY_META[cat.name];
+              const pct = data.problemPosts > 0 ? (cat.count / data.problemPosts) * 100 : 0;
+              return (
+                <div key={cat.name} className="flex items-center gap-3.5">
+                  <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${meta.bg}`}>
+                    <meta.icon className={`h-5 w-5 ${meta.color}`} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-sm font-bold">{cat.name}</span>
+                      <span className={`font-black ${meta.color}`}>
+                        <span className="text-xl tracking-tight">{cat.count}</span>
+                        <span className="ml-0.5 text-xs">件</span>
+                      </span>
+                    </div>
+                    <div className="mt-1.5 h-2.5 overflow-hidden rounded-full bg-surface-2">
+                      <div
+                        className="h-full rounded-full animate-fill-bar"
+                        style={{
+                          width: `${pct}%`,
+                          backgroundColor: meta.color.includes("red")
+                            ? "#fca5a5"
+                            : meta.color.includes("amber")
+                            ? "#fcd34d"
+                            : meta.color.includes("violet")
+                            ? "#c4b5fd"
+                            : "#93c5fd",
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          <div className="mt-4 grid grid-cols-2 gap-2.5">
-            <div className="rounded-2xl bg-red-50 px-4 py-3 text-center">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-red-600">問題投稿</p>
-              <p className="mt-0.5 text-2xl font-black text-red-600">
-                {data.problemPosts}
-                <span className="ml-0.5 text-xs font-bold">件</span>
-              </p>
-            </div>
-            <div className="rounded-2xl bg-slate-50 px-4 py-3 text-center">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-text-muted">分析対象</p>
-              <p className="mt-0.5 text-2xl font-black text-text-sub">
-                {data.totalPosts}
-                <span className="ml-0.5 text-xs font-bold">件</span>
-              </p>
-            </div>
-          </div>
-        </section>
+        </div>
 
-        {/* ===== 3. Evidence list (real data) ===== */}
-        <section className="mt-6">
-          <div className="flex items-end justify-between">
+        {/* ===== 3. Behavior data — same as result ===== */}
+        <div className="mt-5 rounded-2xl border border-border bg-white p-5 sm:p-6">
+          <h3 className="text-base sm:text-lg font-extrabold tracking-tight">投稿行動データ</h3>
+
+          <div className="mt-5 grid grid-cols-3 gap-2">
+            <div className="rounded-xl border border-border bg-surface p-3 sm:p-4 text-center">
+              <p className="text-[10px] font-medium text-text-muted">作成日</p>
+              <p className="mt-1 text-sm sm:text-base font-extrabold tracking-tight">{data.accountCreated}</p>
+            </div>
+            <div className="rounded-xl border border-border bg-surface p-3 sm:p-4 text-center">
+              <p className="text-[10px] font-medium text-text-muted">リプライ率</p>
+              <p className="mt-1 text-lg sm:text-xl font-black tracking-tight text-indigo-600">
+                {data.replyRatio}<span className="text-xs">%</span>
+              </p>
+            </div>
+            <div className="rounded-xl border border-border bg-surface p-3 sm:p-4 text-center">
+              <p className="text-[10px] font-medium text-text-muted">問題投稿率</p>
+              <p className="mt-1 text-lg sm:text-xl font-black tracking-tight text-red-500">
+                {problemRate}<span className="text-xs">%</span>
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-6">
+            <p className="text-xs font-bold text-text-sub">問題投稿の月別件数</p>
+            <div className="mt-3 flex items-end gap-3 h-24">
+              {data.monthlyProblemPosts.map((point, i) => {
+                const maxCount = Math.max(...data.monthlyProblemPosts.map((p) => p.count));
+                return (
+                  <div key={point.month} className="flex flex-1 flex-col items-center gap-1.5">
+                    <span className="text-sm font-extrabold text-text-sub">{point.count}</span>
+                    <div
+                      className="w-full rounded-t-lg bg-gradient-to-t from-violet-400 to-indigo-300 animate-fill-bar"
+                      style={{
+                        height: `${maxCount > 0 ? (point.count / maxCount) * 64 : 6}px`,
+                        animationDelay: `${i * 0.2}s`,
+                      }}
+                    />
+                    <span className="text-xs text-text-muted">{point.month}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {data.mentionedUsers.length > 0 && (
+            <div className="mt-6">
+              <p className="text-xs font-bold text-text-sub">リプライ・メンション先（上位）</p>
+              <div className="mt-3 space-y-2.5">
+                {data.mentionedUsers.map((u) => {
+                  const max = data.mentionedUsers[0].count;
+                  return (
+                    <div key={u.handle} className="flex items-center gap-3">
+                      <span className="w-20 sm:w-24 shrink-0 truncate text-sm font-bold text-text-sub">@{u.handle}</span>
+                      <div className="flex-1 h-2.5 overflow-hidden rounded-full bg-surface-2">
+                        <div
+                          className="h-full rounded-full bg-indigo-300 animate-fill-bar"
+                          style={{ width: `${(u.count / max) * 100}%` }}
+                        />
+                      </div>
+                      <span className="w-12 text-right text-sm font-extrabold text-text-sub">
+                        {u.count}<span className="text-[10px] font-medium ml-0.5">回</span>
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {data.hostileKeywords.length > 0 && (
+            <div className="mt-6">
+              <p className="text-xs font-bold text-text-sub">検出されたNGワード（出現回数）</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {data.hostileKeywords.map((kw) => (
+                  <span
+                    key={kw.word}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-bold text-text-sub"
+                  >
+                    {kw.word}
+                    <span className="text-base font-black text-violet-600">{kw.count}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ===== 4. PREMIUM EXTENSION — Full evidence list ===== */}
+        <div className="mt-5">
+          <div className="mb-3 flex items-end justify-between">
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-violet-600">UNLOCKED</p>
-              <h2 className="mt-1 text-[18px] font-extrabold tracking-tight sm:text-xl">
-                検出された投稿 全{evidence.length}件
-              </h2>
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-violet-600">PREMIUM</p>
+              <h3 className="mt-1 text-base sm:text-lg font-extrabold tracking-tight">検出された投稿 全{evidence.length}件</h3>
               <p className="mt-0.5 text-[10.5px] text-text-muted">
                 AIによる分類結果。法的判断は弁護士の確認が必要です
               </p>
@@ -214,23 +394,23 @@ export function PremiumClient({ username }: { username: string }) {
           </div>
 
           {evidence.length === 0 ? (
-            <p className="mt-4 rounded-2xl border border-border bg-white px-4 py-8 text-center text-sm text-text-muted">
+            <p className="rounded-2xl border border-border bg-white px-4 py-8 text-center text-sm text-text-muted">
               問題のある投稿は検出されませんでした
             </p>
           ) : (
-            <div className="mt-4 space-y-3">
+            <div className="space-y-3">
               {evidence.map((ev, idx) => (
                 <EvidenceCard key={ev.tweet_id} idx={idx + 1} ev={ev} username={data.username} />
               ))}
             </div>
           )}
-        </section>
+        </div>
 
-        {/* ===== 4. PDF templates ===== */}
-        <section className="mt-8">
+        {/* ===== 5. PREMIUM — PDF templates ===== */}
+        <div className="mt-8">
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-violet-600">DOCUMENTS</p>
-          <h2 className="mt-1 text-[18px] font-extrabold tracking-tight sm:text-xl">弁護士監修テンプレート</h2>
-          <p className="mt-1 text-[12px] text-text-muted">氏名と日付を入力するだけで、そのまま提出可能な書類です</p>
+          <h3 className="mt-1 text-base sm:text-lg font-extrabold tracking-tight">弁護士監修テンプレート</h3>
+          <p className="mt-1 text-[12px] text-text-muted">提携弁護士事務所による監修予定の参考フォーマット集</p>
 
           <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
             {TEMPLATES.map((tpl) => (
@@ -250,10 +430,10 @@ export function PremiumClient({ username }: { username: string }) {
               </button>
             ))}
           </div>
-        </section>
+        </div>
 
-        {/* ===== 5. Lawyer referral ===== */}
-        <section className="mt-8 overflow-hidden rounded-3xl border border-indigo-100 bg-gradient-to-br from-indigo-50 via-violet-50 to-white p-5 sm:p-6">
+        {/* ===== 6. PREMIUM — Lawyer referral ===== */}
+        <div className="mt-8 overflow-hidden rounded-3xl border border-indigo-100 bg-gradient-to-br from-indigo-50 via-violet-50 to-white p-5 sm:p-6">
           <div className="flex items-center gap-2">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-500 shadow-lg shadow-indigo-500/30">
               <MessageCircle className="h-5 w-5 text-white" />
@@ -287,11 +467,14 @@ export function PremiumClient({ username }: { username: string }) {
           <p className="mt-2 text-center text-[10px] text-text-muted">
             ※ 取次後の対応・契約・費用は弁護士事務所と直接お取り決めください
           </p>
-        </section>
+        </div>
 
-        {/* ===== 6. Plan management ===== */}
-        <section className="mt-8 rounded-3xl border border-border bg-white p-5 sm:p-6">
-          <h2 className="text-[16px] font-extrabold tracking-tight">プラン管理</h2>
+        {/* ===== 7. PREMIUM — Plan management ===== */}
+        <div className="mt-8 rounded-2xl border border-border bg-white p-5 sm:p-6">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-violet-500" />
+            <h3 className="text-base font-extrabold tracking-tight">プラン管理</h3>
+          </div>
           <div className="mt-4 space-y-2.5">
             {[
               { icon: ShieldCheck, label: "プラン", value: "プレミアム（月額）", color: "text-violet-500" },
@@ -309,8 +492,17 @@ export function PremiumClient({ username }: { username: string }) {
           <button className="mt-4 w-full rounded-2xl border border-border bg-white py-3 text-[12px] font-bold text-text-muted active:bg-surface">
             プランを解約する
           </button>
-        </section>
+        </div>
 
+        {/* ===== 8. Account profile (de-emphasized, bottom) ===== */}
+        {profile && (
+          <div className="mt-8">
+            <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-text-muted">アカウント情報</p>
+            <AccountProfileCard profile={profile} />
+          </div>
+        )}
+
+        {/* ===== Disclaimer ===== */}
         <div className="safe-pb mt-8 rounded-2xl border border-amber-200 bg-amber-50/60 px-4 py-3.5 text-[10.5px] leading-relaxed text-amber-900">
           <p className="font-bold">重要なお知らせ</p>
           <p className="mt-1">
@@ -322,7 +514,7 @@ export function PremiumClient({ username }: { username: string }) {
             {data.source === "mock" && " ※現在の表示はデモデータです。"}
           </p>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
@@ -331,7 +523,7 @@ export function PremiumClient({ username }: { username: string }) {
 // Evidence card — one classified problem tweet
 // ============================================================
 function EvidenceCard({ idx, ev, username }: { idx: number; ev: ClassifiedTweet; username: string }) {
-  const sev = SEVERITY_STYLE[ev.severity === "none" ? "low" : ev.severity];
+  const sev = severityStyle[ev.severity === "none" ? "low" : ev.severity];
   const id = String(idx).padStart(3, "0");
   const dateStr = new Date(ev.created_at).toLocaleString("ja-JP", {
     year: "numeric",
@@ -354,7 +546,10 @@ function EvidenceCard({ idx, ev, username }: { idx: number; ev: ClassifiedTweet;
         </span>
         <span className="text-[11px] font-bold text-text-sub">{ev.category}</span>
         {ev.applicable_law && (
-          <span className="ml-auto inline-flex items-center gap-1 rounded-md bg-violet-50 px-2 py-0.5 text-[10px] font-extrabold text-violet-700" title="参考条文（最終的な該当性は弁護士の判断が必要）">
+          <span
+            className="ml-auto inline-flex items-center gap-1 rounded-md bg-violet-50 px-2 py-0.5 text-[10px] font-extrabold text-violet-700"
+            title="参考条文（最終的な該当性は弁護士の判断が必要）"
+          >
             <Scale className="h-2.5 w-2.5" />
             参考: {ev.applicable_law}
           </span>
@@ -362,10 +557,11 @@ function EvidenceCard({ idx, ev, username }: { idx: number; ev: ClassifiedTweet;
       </div>
 
       <div className="px-4 py-3.5">
-        <p className="text-[10px] font-medium text-text-muted">{dateStr}</p>
-        <p className="mt-2 rounded-xl bg-surface px-3.5 py-3 text-[13px] leading-relaxed text-foreground">
-          {ev.text}
+        <p className="text-[10px] font-medium text-text-muted">
+          <Clock className="mr-1 inline h-3 w-3" />
+          {dateStr}
         </p>
+        <p className="mt-2 rounded-xl bg-surface px-3.5 py-3 text-[13px] leading-relaxed text-foreground">{ev.text}</p>
         {ev.reasoning && (
           <p className="mt-2 text-[11px] leading-relaxed text-text-muted">
             <span className="font-bold text-text-sub">AI判定根拠:</span> {ev.reasoning}
@@ -380,7 +576,10 @@ function EvidenceCard({ idx, ev, username }: { idx: number; ev: ClassifiedTweet;
           {ev.tags.length > 0 && (
             <div className="flex flex-wrap items-center justify-end gap-1.5">
               {ev.tags.map((tag) => (
-                <span key={tag} className="rounded border border-border bg-white px-1.5 py-0.5 text-[10px] font-bold text-text-sub">
+                <span
+                  key={tag}
+                  className="rounded border border-border bg-white px-1.5 py-0.5 text-[10px] font-bold text-text-sub"
+                >
                   {tag}
                 </span>
               ))}
