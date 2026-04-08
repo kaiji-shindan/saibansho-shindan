@@ -335,7 +335,9 @@ export function PremiumClient({ username }: { username: string }) {
                 AI判定
               </span>
             </div>
-            <p className="mt-1 text-[11px] text-text-muted">問題投稿の支配的な感情を5軸で集計</p>
+            <p className="mt-1 text-[11px] text-text-muted">
+              問題投稿の支配的な感情を5軸で集計（AIによる文章解析結果。心理学的診断ではありません）
+            </p>
             <div className="mt-4 space-y-2.5">
               {(["anger", "contempt", "mockery", "threat", "sadness"] as const).map((key) => {
                 const meta = EMOTION_META[key];
@@ -365,11 +367,13 @@ export function PremiumClient({ username }: { username: string }) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-wide text-violet-600">TIME HEATMAP</p>
-                <h3 className="mt-0.5 text-base sm:text-lg font-extrabold tracking-tight">投稿時間帯ヒートマップ</h3>
+                <h3 className="mt-0.5 text-base sm:text-lg font-extrabold tracking-tight">直近7日間の投稿時間帯</h3>
               </div>
               <Activity className="h-5 w-5 text-violet-500" />
             </div>
-            <p className="mt-1 text-[11px] text-text-muted">投稿が多い曜日・時間帯ほど色が濃くなります</p>
+            <p className="mt-1 text-[11px] text-text-muted">
+              分析対象: 過去7日間の投稿（X API Basic制約）。色が濃いほど投稿が多い曜日・時間帯
+            </p>
             <Heatmap grid={data.timeHeatmap} />
           </div>
         )}
@@ -517,8 +521,12 @@ export function PremiumClient({ username }: { username: string }) {
             </div>
           </div>
           <p className="mt-3 text-[12px] leading-relaxed text-text-sub">
-            検出された全投稿に <strong>SHA-256ハッシュ</strong> と <strong>取得時刻</strong> を付与した、
-            改ざん検証可能なデータをダウンロードできます。
+            検出された全投稿に <strong>SHA-256データ整合性ハッシュ</strong> と <strong>取得時刻</strong> を付与した、
+            取得時点のスナップショットをダウンロードできます。
+          </p>
+          <p className="mt-1.5 text-[10.5px] leading-relaxed text-text-muted">
+            ※ ハッシュは「当社が取得した時点のデータが、その後改変されていないこと」を内部検証する用途です。
+            法的証拠能力を持つタイムスタンプ認証（TSA）は今後対応予定。
           </p>
           <div className="mt-4 grid grid-cols-2 gap-2.5">
             <button
@@ -545,7 +553,7 @@ export function PremiumClient({ username }: { username: string }) {
               <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-violet-600">PREMIUM</p>
               <h3 className="mt-1 text-base sm:text-lg font-extrabold tracking-tight">検出された投稿 全{evidence.length}件</h3>
               <p className="mt-0.5 text-[10.5px] text-text-muted">
-                各投稿に SHA-256 ハッシュ & 取得時刻を付与（改ざん検証可）
+                各投稿に SHA-256 データ整合性ハッシュ & 取得時刻を付与
               </p>
             </div>
           </div>
@@ -803,7 +811,7 @@ function EvidenceCard({ idx, ev, username }: { idx: number; ev: ClassifiedTweet;
           <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50/50 px-2.5 py-1.5">
             <p className="flex items-center gap-1 text-[9px] font-bold text-emerald-700">
               <Hash className="h-2.5 w-2.5" />
-              改ざん防止ハッシュ (SHA-256)
+              データ整合性ハッシュ (SHA-256)
             </p>
             <p className="mt-0.5 break-all font-mono text-[9px] text-emerald-800">{ev.hash}</p>
             {ev.capturedAt && (
