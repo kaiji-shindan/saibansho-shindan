@@ -959,42 +959,43 @@ function Heatmap({ grid }: { grid: number[][] }) {
   const max = Math.max(1, ...grid.flat());
   const dayLabels = ["日", "月", "火", "水", "木", "金", "土"];
   return (
-    <div className="mt-3 overflow-x-auto">
-      <div className="inline-block min-w-full">
-        {/* Hour ruler */}
-        <div className="flex items-center gap-[2px] pl-7">
-          {Array.from({ length: 24 }, (_, h) => (
-            <div key={h} className="flex w-3 items-center justify-center text-[8px] text-text-muted">
-              {h % 6 === 0 ? h : ""}
-            </div>
-          ))}
-        </div>
-        {grid.map((row, dayIdx) => (
-          <div key={dayIdx} className="mt-[2px] flex items-center gap-[2px]">
-            <div className="w-6 shrink-0 text-[10px] font-bold text-text-sub">{dayLabels[dayIdx]}</div>
-            <div className="flex gap-[2px]">
-              {row.map((count, hourIdx) => {
-                const intensity = count / max;
-                const opacity = count === 0 ? 0.06 : 0.25 + intensity * 0.75;
-                return (
-                  <div
-                    key={hourIdx}
-                    className="h-3 w-3 rounded-[2px] bg-violet-500"
-                    style={{ opacity }}
-                    title={`${dayLabels[dayIdx]}曜 ${hourIdx}時: ${count}件`}
-                  />
-                );
-              })}
-            </div>
+    <div className="mt-3 w-full">
+      {/* Hour ruler */}
+      <div className="grid w-full" style={{ gridTemplateColumns: "1.25rem repeat(24, minmax(0, 1fr))", gap: "2px" }}>
+        <div />
+        {Array.from({ length: 24 }, (_, h) => (
+          <div key={h} className="text-center text-[8px] text-text-muted">
+            {h % 6 === 0 ? h : ""}
           </div>
         ))}
-        <div className="mt-3 flex items-center gap-1.5 pl-7">
-          <span className="text-[9px] text-text-muted">少</span>
-          {[0.1, 0.3, 0.5, 0.7, 0.9].map((o) => (
-            <div key={o} className="h-2.5 w-2.5 rounded-[2px] bg-violet-500" style={{ opacity: o }} />
-          ))}
-          <span className="text-[9px] text-text-muted">多</span>
+      </div>
+      {grid.map((row, dayIdx) => (
+        <div
+          key={dayIdx}
+          className="mt-[2px] grid w-full items-center"
+          style={{ gridTemplateColumns: "1.25rem repeat(24, minmax(0, 1fr))", gap: "2px" }}
+        >
+          <div className="text-[10px] font-bold text-text-sub">{dayLabels[dayIdx]}</div>
+          {row.map((count, hourIdx) => {
+            const intensity = count / max;
+            const opacity = count === 0 ? 0.06 : 0.25 + intensity * 0.75;
+            return (
+              <div
+                key={hourIdx}
+                className="aspect-square w-full rounded-[2px] bg-violet-500"
+                style={{ opacity }}
+                title={`${dayLabels[dayIdx]}曜 ${hourIdx}時: ${count}件`}
+              />
+            );
+          })}
         </div>
+      ))}
+      <div className="mt-3 flex items-center gap-1.5 pl-[1.25rem]">
+        <span className="text-[9px] text-text-muted">少</span>
+        {[0.1, 0.3, 0.5, 0.7, 0.9].map((o) => (
+          <div key={o} className="h-2.5 w-2.5 rounded-[2px] bg-violet-500" style={{ opacity: o }} />
+        ))}
+        <span className="text-[9px] text-text-muted">多</span>
       </div>
     </div>
   );
