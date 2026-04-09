@@ -28,7 +28,13 @@ import {
   Hash,
   FileJson,
   TableProperties,
+  AtSign,
+  Mail,
+  Crown,
+  Link2,
+  Shield,
 } from "lucide-react";
+import { generateConnectedAnalysis, type AttackItem, type AttackerSummary, type ConnectedAnalysis } from "@/lib/x-connected-mock";
 import type { DiagnosisData, ClassifiedTweet, Severity, Level, CategoryName } from "@/lib/diagnose-types";
 import { AccountProfileCard, generateMockProfile, type AccountProfile } from "@/components/account-profile";
 
@@ -167,10 +173,52 @@ const TEMPLATES = [
 // ============================================================
 // Main component
 // ============================================================
+const CONNECTED_KEY = "x_account_connected_v1";
+const CHANNEL_META = {
+  mention: { label: "メンション", icon: AtSign, color: "text-blue-500" },
+  reply:   { label: "リプライ",   icon: MessageCircle, color: "text-violet-500" },
+  dm:      { label: "DM",         icon: Mail, color: "text-rose-500" },
+} as const;
+const ATTACKER_LEVEL_GRADIENT: Record<AttackerSummary["estimatedLevel"], string> = {
+  S: "from-red-500 to-rose-600",
+  A: "from-orange-400 to-orange-500",
+  B: "from-amber-400 to-amber-500",
+  C: "from-yellow-400 to-yellow-500",
+  D: "from-blue-400 to-blue-500",
+  E: "from-emerald-400 to-emerald-500",
+};
+
 export function PremiumClient({ username }: { username: string }) {
   const [data, setData] = useState<DiagnosisData | null>(null);
   const [profile, setProfile] = useState<AccountProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [xConnected, setXConnected] = useState(false);
+  const [connectedData, setConnectedData] = useState<ConnectedAnalysis | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = window.localStorage.getItem(CONNECTED_KEY);
+    if (stored === "true") {
+      setXConnected(true);
+      setConnectedData(generateConnectedAnalysis());
+    }
+  }, []);
+
+  const handleConnect = () => {
+    setXConnected(true);
+    setConnectedData(generateConnectedAnalysis());
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(CONNECTED_KEY, "true");
+    }
+  };
+
+  const handleDisconnect = () => {
+    setXConnected(false);
+    setConnectedData(null);
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(CONNECTED_KEY);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -295,6 +343,50 @@ export function PremiumClient({ username }: { username: string }) {
                 <p className="mt-1 text-[10px] font-medium text-slate-500">{s.label}</p>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* ===== 1.4 X account connection ===== */}
+        <div className={`mt-5 overflow-hidden rounded-3xl border p-5 sm:p-6 ${xConnected ? "border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50" : "border-rose-200 bg-gradient-to-br from-rose-50 to-orange-50"}`}>
+          <div className="flex items-start gap-3">
+            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl shadow-lg ${xConnected ? "bg-gradient-to-br from-emerald-500 to-teal-500 shadow-emerald-500/30" : "bg-gradient-to-br from-rose-500 to-orange-500 shadow-rose-500/30"}`}>
+              <Link2 className="h-5 w-5 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className={`text-[11px] font-bold uppercase tracking-wide ${xConnected ? "text-emerald-600" : "text-rose-600"}`}>
+                X ACCOUNT CONNECTION
+              </p>
+              <p className="text-[15px] font-extrabold tracking-tight">
+                {xConnected ? "Xアカウント連携済み" : "Xアカウントを連携するとさらに分析できます"}
+              </p>
+              <p className="mt-1.5 text-[12px] leading-relaxed text-text-sub">
+                {xConnected
+                  ? "あなた宛のリプライ・メンション・DMをAIが解析し、加害者ランキングと攻撃投稿の全件をページ下部に表示しています。"
+                  : "あなた自身が誹謗中傷を受けている場合、Xアカウントを連携することで「あなた宛のリプライ・メンション・DM」を解析し、加害者ランキングを生成できます。"}
+              </p>
+              {!xConnected && (
+                <button
+                  onClick={handleConnect}
+                  className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-rose-500 to-orange-500 px-5 py-2.5 text-[13px] font-extrabold text-white shadow-lg shadow-rose-500/30 active:scale-[0.97]"
+                >
+                  <Link2 className="h-4 w-4" />
+                  Xアカウントを連携する
+                </button>
+              )}
+              {xConnected && (
+                <button
+                  onClick={handleDisconnect}
+                  className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-emerald-300 bg-white px-3 py-1 text-[11px] font-bold text-emerald-700 active:bg-emerald-50"
+                >
+                  連携を解除
+                </button>
+              )}
+              {!xConnected && (
+                <p className="mt-2 text-[10px] text-rose-700">
+                  ※ 連携時は dm.read（DM読み取り）への同意が必要です
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
@@ -634,6 +726,67 @@ export function PremiumClient({ username }: { username: string }) {
           </p>
         </div>
 
+        {/* ===== 6.5 X-CONNECTED — Attackers & incoming attacks ===== */}
+        {xConnected && connectedData && (
+          <>
+            <div className="mt-8 overflow-hidden rounded-3xl border border-rose-200 bg-gradient-to-br from-[#1a0f1f] via-[#2d1424] to-[#3d1825] p-5 sm:p-6 text-white">
+              <div className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-rose-300" />
+                <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-rose-300">YOUR INBOX</span>
+              </div>
+              <h2 className="mt-3 text-xl sm:text-2xl font-extrabold leading-tight tracking-tight">
+                あなたへの攻撃投稿
+                <br />
+                <span className="text-rose-300">{connectedData.totals.attacks}件</span>
+                <span className="text-sm font-bold text-slate-400"> / 加害者 {connectedData.totals.attackers}名</span>
+              </h2>
+              <p className="mt-2 text-[12px] leading-relaxed text-slate-400">
+                Xアカウント連携により取得した、あなた宛のリプライ・メンション・DMのAI解析結果です
+              </p>
+              <div className="mt-4 grid grid-cols-3 gap-2">
+                {[
+                  { label: "高", value: connectedData.totals.high, color: "text-red-300" },
+                  { label: "中", value: connectedData.totals.medium, color: "text-amber-300" },
+                  { label: "低", value: connectedData.totals.low, color: "text-blue-300" },
+                ].map((s) => (
+                  <div key={s.label} className="rounded-xl bg-white/[0.06] px-3 py-3 text-center">
+                    <p className={`text-xl font-black tracking-tight ${s.color}`}>{s.value}</p>
+                    <p className="mt-1 text-[10px] font-medium text-slate-500">重要度{s.label}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <section className="mt-5">
+              <div className="mb-3">
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-rose-600">RANKING</p>
+                <h3 className="mt-1 text-base sm:text-lg font-extrabold tracking-tight">加害者ランキング</h3>
+                <p className="mt-0.5 text-[10.5px] text-text-muted">攻撃の重大性 × 件数で訴訟優先順に並び替え</p>
+              </div>
+              <div className="space-y-3">
+                {connectedData.attackers.map((atk, i) => (
+                  <AttackerCard key={atk.username} rank={i + 1} atk={atk} />
+                ))}
+              </div>
+            </section>
+
+            <section className="mt-5">
+              <div className="mb-3">
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-rose-600">EVIDENCE</p>
+                <h3 className="mt-1 text-base sm:text-lg font-extrabold tracking-tight">受信した攻撃 全{connectedData.attacks.length}件</h3>
+                <p className="mt-0.5 text-[10.5px] text-text-muted">
+                  メンション・リプライ・DMから検出。各投稿に SHA-256 ハッシュ & 取得時刻を付与
+                </p>
+              </div>
+              <div className="space-y-3">
+                {connectedData.attacks.map((a, i) => (
+                  <AttackCard key={a.id} idx={i + 1} attack={a} />
+                ))}
+              </div>
+            </section>
+          </>
+        )}
+
         {/* ===== 7. PREMIUM — Plan management ===== */}
         <div className="mt-8 rounded-2xl border border-border bg-white p-5 sm:p-6">
           <div className="flex items-center gap-2">
@@ -841,6 +994,144 @@ function EvidenceCard({ idx, ev, username }: { idx: number; ev: ClassifiedTweet;
           <ExternalLink className="h-3.5 w-3.5 text-blue-500" />
           原文
         </a>
+      </div>
+    </article>
+  );
+}
+
+// ============================================================
+// Attacker card (for X-connected mode)
+// ============================================================
+function AttackerCard({ rank, atk }: { rank: number; atk: AttackerSummary }) {
+  const gradient = ATTACKER_LEVEL_GRADIENT[atk.estimatedLevel];
+  const dateRange = `${new Date(atk.firstSeen).toLocaleDateString("ja-JP")} 〜 ${new Date(atk.lastSeen).toLocaleDateString("ja-JP")}`;
+  return (
+    <article className="overflow-hidden rounded-2xl border border-border bg-white shadow-[0_2px_12px_-4px_rgba(15,23,42,0.06)]">
+      <div className="flex items-center gap-3 p-4">
+        <div className="relative">
+          <div className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${gradient} text-xl font-black text-white shadow-lg`}>
+            {atk.estimatedLevel}
+          </div>
+          {rank <= 3 && (
+            <div className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-amber-400 text-[10px] font-black text-white shadow-md">
+              <Crown className="h-2.5 w-2.5" />
+            </div>
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[14px] font-extrabold tracking-tight">@{atk.username}</p>
+          <p className="text-[11px] text-text-muted">{dateRange}</p>
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            {(["mention", "reply", "dm"] as const).map((c) => {
+              const cnt = atk.channels[c];
+              if (cnt === 0) return null;
+              const meta = CHANNEL_META[c];
+              const Icon = meta.icon;
+              return (
+                <span key={c} className="inline-flex items-center gap-1 rounded-md bg-surface px-1.5 py-0.5 text-[10px] font-bold text-text-sub">
+                  <Icon className={`h-2.5 w-2.5 ${meta.color}`} />
+                  {meta.label} {cnt}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="text-2xl font-black tracking-tight text-rose-500">{atk.attackCount}</p>
+          <p className="text-[9px] font-bold uppercase text-text-muted">attacks</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-px border-t border-border/70 bg-border/50">
+        <a
+          href={`/diagnose/${encodeURIComponent(atk.username)}`}
+          className="flex items-center justify-center gap-1.5 bg-white py-3 text-[11px] font-bold text-text-sub active:bg-surface"
+        >
+          <ExternalLink className="h-3.5 w-3.5 text-violet-500" />
+          このアカウントを診断
+        </a>
+        <a
+          href={`https://x.com/${encodeURIComponent(atk.username)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-1.5 bg-white py-3 text-[11px] font-bold text-text-sub active:bg-surface"
+        >
+          <ExternalLink className="h-3.5 w-3.5 text-blue-500" />
+          Xで開く
+        </a>
+      </div>
+    </article>
+  );
+}
+
+// ============================================================
+// Attack card — single hostile incoming message (X-connected mode)
+// ============================================================
+function AttackCard({ idx, attack }: { idx: number; attack: AttackItem }) {
+  const sevMap = {
+    high:   { label: "高", bg: "bg-red-100",   text: "text-red-700",   border: "border-red-200" },
+    medium: { label: "中", bg: "bg-amber-100", text: "text-amber-700", border: "border-amber-200" },
+    low:    { label: "低", bg: "bg-slate-100", text: "text-slate-700", border: "border-slate-200" },
+  } as const;
+  const sev = sevMap[attack.severity === "none" ? "low" : attack.severity];
+  const id = String(idx).padStart(3, "0");
+  const channel = CHANNEL_META[attack.channel];
+  const ChannelIcon = channel.icon;
+  const dateStr = new Date(attack.created_at).toLocaleString("ja-JP", {
+    year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
+  });
+
+  return (
+    <article className="overflow-hidden rounded-2xl border border-border bg-white shadow-[0_2px_12px_-4px_rgba(15,23,42,0.06)]">
+      <div className="flex items-center gap-2 border-b border-border/70 bg-surface/50 px-4 py-2.5">
+        <span className="text-[11px] font-extrabold text-text-muted">#{id}</span>
+        <span className={`rounded-md border px-2 py-0.5 text-[10px] font-extrabold ${sev.bg} ${sev.text} ${sev.border}`}>
+          {sev.label}
+        </span>
+        <span className="text-[11px] font-bold text-text-sub">{attack.category}</span>
+        <span className="ml-auto inline-flex items-center gap-1 rounded-md bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700">
+          <ChannelIcon className="h-2.5 w-2.5" />
+          {channel.label}
+        </span>
+      </div>
+      <div className="px-4 py-3.5">
+        <p className="flex items-center justify-between text-[10px] font-medium text-text-muted">
+          <span>
+            <Clock className="mr-1 inline h-3 w-3" />
+            {dateStr}
+          </span>
+          <a
+            href={`/diagnose/${encodeURIComponent(attack.attacker)}`}
+            className="font-bold text-violet-600 hover:underline"
+          >
+            @{attack.attacker} →
+          </a>
+        </p>
+        <p className="mt-2 rounded-xl bg-surface px-3.5 py-3 text-[13px] leading-relaxed text-foreground">
+          {attack.text}
+        </p>
+        {attack.applicable_law && (
+          <p className="mt-2">
+            <span className="inline-flex items-center gap-1 rounded-md bg-violet-50 px-2 py-0.5 text-[10px] font-extrabold text-violet-700">
+              <Scale className="h-2.5 w-2.5" />
+              参考: {attack.applicable_law}
+            </span>
+          </p>
+        )}
+        {attack.reasoning && (
+          <p className="mt-2 text-[11px] leading-relaxed text-text-muted">
+            <span className="font-bold text-text-sub">AI判定根拠:</span> {attack.reasoning}
+          </p>
+        )}
+        <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50/50 px-2.5 py-1.5">
+          <p className="flex items-center gap-1 text-[9px] font-bold text-emerald-700">
+            <Hash className="h-2.5 w-2.5" />
+            データ整合性ハッシュ (SHA-256)
+          </p>
+          <p className="mt-0.5 break-all font-mono text-[9px] text-emerald-800">{attack.hash}</p>
+          <p className="mt-0.5 text-[9px] text-emerald-700">
+            取得時刻: {new Date(attack.capturedAt).toLocaleString("ja-JP")}
+          </p>
+        </div>
       </div>
     </article>
   );

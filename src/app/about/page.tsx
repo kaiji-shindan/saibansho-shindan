@@ -1,5 +1,6 @@
 import { Header } from "@/components/header";
 import { Hero } from "@/components/hero";
+import { Mission } from "@/components/mission";
 import { Problem } from "@/components/problem";
 import { HowItWorks } from "@/components/how-it-works";
 import { Features } from "@/components/features";
@@ -14,6 +15,7 @@ export default function AboutPage() {
       <Header />
       <main>
         <Hero />
+        <Mission />
         <Problem />
         <HowItWorks />
         <Features />

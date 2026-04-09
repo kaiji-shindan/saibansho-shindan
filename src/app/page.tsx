@@ -135,23 +135,6 @@ export default function Home() {
             ))}
           </div>
 
-          {/* ===== Mission statement ===== */}
-          <div
-            className="animate-fade-in mt-10 sm:mt-12"
-            style={{ animationDelay: "0.85s", opacity: 0 }}
-          >
-            <div className="mx-auto max-w-md rounded-2xl border border-border/70 bg-white/70 px-5 py-4 backdrop-blur-sm">
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-gradient-blue">
-                Our Mission
-              </p>
-              <p className="mt-1.5 text-[13px] font-bold leading-relaxed text-foreground sm:text-sm">
-                被害者を助けると同時に、
-                <br />
-                <span className="text-gradient-blue">加害者を生まないサービス</span>にしたい
-              </p>
-            </div>
-          </div>
-
           {/* ===== Disclosure request benefits ===== */}
           <div
             className="animate-fade-in mt-10 sm:mt-12"
