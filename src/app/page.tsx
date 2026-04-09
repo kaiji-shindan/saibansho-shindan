@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Gavel, ArrowRight, Loader2, Scale, Shield, Zap } from "lucide-react";
+import { ArrowRight, Loader2, Scale, Shield, Zap } from "lucide-react";
 import { parseUsername } from "@/lib/parse-username";
 
 export default function Home() {
@@ -38,12 +38,21 @@ export default function Home() {
             開示請求<span className="text-gradient-blue">診断</span>
           </span>
         </div>
-        <a
-          href="/about"
-          className="inline-flex h-9 items-center rounded-full border border-border/80 bg-white/70 px-3.5 text-[12px] font-semibold text-text-sub backdrop-blur-sm transition-all active:scale-[0.96] sm:h-10 sm:px-4 sm:text-xs"
-        >
-          サービスについて
-        </a>
+        <div className="flex items-center gap-2">
+          <a
+            href="/me"
+            className="inline-flex h-9 items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-3 text-[11px] font-bold text-rose-700 backdrop-blur-sm transition-all active:scale-[0.96] sm:h-10 sm:px-3.5 sm:text-xs"
+          >
+            <Shield className="h-3 w-3" />
+            被害者モード
+          </a>
+          <a
+            href="/about"
+            className="inline-flex h-9 items-center rounded-full border border-border/80 bg-white/70 px-3.5 text-[12px] font-semibold text-text-sub backdrop-blur-sm transition-all active:scale-[0.96] sm:h-10 sm:px-4 sm:text-xs"
+          >
+            サービスについて
+          </a>
+        </div>
       </header>
 
       {/* ===== Main ===== */}
