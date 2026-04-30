@@ -24,10 +24,10 @@ export function Cta() {
 
       <div className="relative mx-auto max-w-2xl px-4 text-center sm:px-6">
         <h2 className="text-2xl font-extrabold tracking-tight sm:text-4xl">
-          誹謗中傷を、客観的に可視化する。
+          泣き寝入りを、終わりにしよう。
         </h2>
         <p className="mx-auto mt-3 max-w-md text-sm text-white/60">
-          まずは無料で診断。法的リスクの可能性を構造化された情報として確認できます。
+          まずは無料で診断。あなたの被害が法的に対処できるか確認しましょう。
         </p>
 
         <form onSubmit={handleSubmit} className="mx-auto mt-8 max-w-md">

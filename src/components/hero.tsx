@@ -111,9 +111,9 @@ export function Hero() {
           className="animate-slide-up text-4xl font-extrabold leading-[1.15] tracking-tight text-white sm:text-5xl lg:text-6xl"
           style={{ animationDelay: "0.1s", opacity: 0 }}
         >
-          <span className="inline-block">誹謗中傷を、</span>
+          <span className="inline-block">その誹謗中傷、</span>
           <span className="inline-block">
-            <span className="bg-gradient-to-r from-violet-300 via-indigo-300 to-blue-300 bg-clip-text text-transparent">客観的に可視化</span>する
+            <span className="bg-gradient-to-r from-violet-300 via-indigo-300 to-blue-300 bg-clip-text text-transparent">開示請求</span>かも？
           </span>
         </h1>
 
@@ -122,9 +122,9 @@ export function Hero() {
           className="animate-slide-up mx-auto mt-4 max-w-lg text-base leading-relaxed text-slate-400 sm:text-lg"
           style={{ animationDelay: "0.2s", opacity: 0 }}
         >
-          Xアカウントを入力するだけで、
+          気になるXアカウントを入力するだけ。
           <br className="hidden sm:block" />
-          公開投稿の<strong className="text-white">法的リスクの可能性</strong>を構造化して提示します。
+          独自エンジンが投稿を分析して<strong className="text-white">開示請求レベル</strong>を判定します。
         </p>
 
         {/* Search label */}

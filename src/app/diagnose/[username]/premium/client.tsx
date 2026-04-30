@@ -12,7 +12,6 @@ import {
   Clock,
   Download,
   FileText,
-  MessageCircle,
   Scale,
   Sparkles,
   CheckCircle2,
@@ -38,7 +37,7 @@ const levelConfig: Record<
   Level,
   { label: string; color: string; gradient: string; desc: string }
 > = {
-  S: { label: "極めて高い", color: "text-red-600",     gradient: "from-red-500 to-rose-600",    desc: "専門家への相談を検討する材料となります。" },
+  S: { label: "極めて高い", color: "text-red-600",     gradient: "from-red-500 to-rose-600",    desc: "即座に証拠保全と法的対応の検討を推奨します。" },
   A: { label: "かなり高い", color: "text-orange-600",  gradient: "from-orange-400 to-orange-500", desc: "複数の法令に抵触する可能性があります。" },
   B: { label: "高い",       color: "text-amber-600",   gradient: "from-amber-400 to-amber-500",  desc: "法的措置の対象となりうる投稿が見つかりました。" },
   C: { label: "やや高い",   color: "text-yellow-600",  gradient: "from-yellow-400 to-yellow-500", desc: "問題のある投稿がいくつか見つかりました。" },
@@ -637,7 +636,7 @@ export function PremiumClient({ username }: { username: string }) {
 
           <div className="mt-5 rounded-2xl bg-gradient-to-r from-indigo-50 to-violet-50 border border-indigo-100 p-4 text-center">
             <p className="text-sm font-extrabold text-indigo-900 leading-relaxed">
-              詳細レポートで証拠を整理し、<br className="sm:hidden" />法的対処の検討材料として活用できます
+              詳細レポートで証拠を揃えれば、<br className="sm:hidden" />法的対処を本格的に検討できます
             </p>
           </div>
         </div>
@@ -733,7 +732,7 @@ export function PremiumClient({ username }: { username: string }) {
         {/* ===== 7. LINE フォローアップ ===== */}
         <div className="mt-8 rounded-2xl border border-[#06c755]/30 bg-gradient-to-br from-[#f0fbf1] to-white p-5 sm:p-6">
           <div className="flex items-center gap-2">
-            <MessageCircle className="h-4 w-4 text-[#06c755]" />
+            <Image src="/icon_line.png" alt="" width={16} height={16} />
             <h3 className="text-base font-extrabold tracking-tight">公式LINEで続報を受け取る</h3>
           </div>
           <p className="mt-3 text-[13px] leading-relaxed text-text-sub">

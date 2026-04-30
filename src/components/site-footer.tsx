@@ -6,7 +6,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { MessageCircle } from "lucide-react";
 import { getLineAddUrl } from "@/lib/line";
 
 interface SiteFooterProps {
@@ -81,7 +80,7 @@ export function SiteFooter({ tone = "light" }: SiteFooterProps) {
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#06c755] to-[#04a043] px-5 py-2.5 text-xs font-extrabold text-white shadow-md shadow-[#06c755]/30 active:scale-[0.97]"
           >
-            <MessageCircle className="h-4 w-4" />
+            <Image src="/icon_line.png" alt="" width={16} height={16} />
             友だち追加
           </a>
         </div>

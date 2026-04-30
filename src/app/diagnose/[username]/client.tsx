@@ -66,7 +66,7 @@ const levelConfig: Record<
   Level,
   { label: string; color: string; gradient: string; bg: string; border: string; textBg: string; desc: string }
 > = {
-  S: { label: "極めて高い", color: "text-red-600", gradient: "from-red-500 to-rose-600", bg: "bg-red-50", border: "border-red-200", textBg: "bg-red-600", desc: "専門家への相談を検討する材料となります。" },
+  S: { label: "極めて高い", color: "text-red-600", gradient: "from-red-500 to-rose-600", bg: "bg-red-50", border: "border-red-200", textBg: "bg-red-600", desc: "即座に証拠保全と法的対応の検討を推奨します。" },
   A: { label: "かなり高い", color: "text-orange-600", gradient: "from-orange-400 to-orange-500", bg: "bg-orange-50", border: "border-orange-200", textBg: "bg-orange-500", desc: "複数の法令に抵触する可能性があります。" },
   B: { label: "高い", color: "text-amber-600", gradient: "from-amber-400 to-amber-500", bg: "bg-amber-50", border: "border-amber-200", textBg: "bg-amber-500", desc: "法的措置の対象となりうる投稿が見つかりました。" },
   C: { label: "やや高い", color: "text-yellow-600", gradient: "from-yellow-400 to-yellow-500", bg: "bg-yellow-50", border: "border-yellow-200", textBg: "bg-yellow-500", desc: "問題のある投稿がいくつか見つかりました。" },
@@ -452,7 +452,7 @@ export function DiagnoseClient({ username }: { username: string }) {
           </div>
         </div>
 
-        {/* ===== 4. Notice banner — 証拠保全の重要性 ===== */}
+        {/* ===== 4. Urgency banner ===== */}
         <div className="mt-5 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 p-5">
           <div className="flex gap-4">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-100">
@@ -461,8 +461,8 @@ export function DiagnoseClient({ username }: { username: string }) {
             <div className="flex-1">
               <p className="text-base font-extrabold text-amber-900 leading-snug">投稿が削除される前に証拠保全を</p>
               <p className="mt-2 text-sm leading-relaxed text-amber-700">
-                投稿が削除されると、後から発信者情報開示請求を行う場合に必要な証拠の収集が難しくなります。
-                早めに詳細レポートを取得し、証拠を整理しておくことを推奨します。
+                相手が投稿を削除すると、開示請求に必要な証拠の収集が難しくなります。
+                早めに詳細レポートを取得し、証拠保全の手続きを始めることをおすすめします。
               </p>
             </div>
           </div>
@@ -586,7 +586,7 @@ export function DiagnoseClient({ username }: { username: string }) {
 
           <div className="mt-5 rounded-2xl bg-gradient-to-r from-indigo-50 to-violet-50 border border-indigo-100 p-4 text-center">
             <p className="text-sm font-extrabold text-indigo-900 leading-relaxed">
-              詳細レポートで証拠を整理し、<br className="sm:hidden" />法的対処の検討材料として活用できます
+              詳細レポートで証拠を揃えれば、<br className="sm:hidden" />法的対処を本格的に検討できます
             </p>
           </div>
         </div>

@@ -411,7 +411,7 @@ export default function ForLawyersPage() {
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#06c755] to-[#04a043] px-6 py-5 text-sm font-extrabold text-white shadow-xl shadow-[#06c755]/30 hover:opacity-90 active:scale-[0.97] sm:text-base"
               >
-                <MessageCircle className="h-5 w-5" />
+                <Image src="/icon_line.png" alt="" width={20} height={20} />
                 公式 LINE で相談する
               </a>
               <a

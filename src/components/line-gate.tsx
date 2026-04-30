@@ -10,7 +10,8 @@
 // ============================================================
 
 import { useCallback, useEffect, useState } from "react";
-import { Sparkles, MessageCircle, Lock, CheckCircle2 } from "lucide-react";
+import Image from "next/image";
+import { Sparkles, Lock, CheckCircle2 } from "lucide-react";
 import {
   LINE_VERIFIED_COOKIE,
   LINE_VERIFIED_COOKIE_LEGACY,
@@ -138,7 +139,7 @@ export function LineGateCard({ username }: { username: string }) {
             className="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#06c755] to-[#04a043] px-6 py-4 text-base font-extrabold text-white shadow-lg shadow-[#06c755]/30 active:scale-[0.97]"
           >
             詳細レポートを開く
-            <MessageCircle className="h-5 w-5" />
+            <Image src="/icon_line.png" alt="" width={20} height={20} />
           </a>
           <button
             onClick={onClick}
@@ -153,7 +154,7 @@ export function LineGateCard({ username }: { username: string }) {
             onClick={onClick}
             className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#06c755] to-[#04a043] px-6 py-4 text-base font-extrabold text-white shadow-lg shadow-[#06c755]/30 active:scale-[0.97]"
           >
-            <MessageCircle className="h-5 w-5" />
+            <Image src="/icon_line.png" alt="" width={20} height={20} />
             LINEで詳細レポートを受け取る
           </button>
           <p className="mt-3 text-center text-[11px] text-text-muted">
@@ -217,7 +218,7 @@ export function LineGateOverlay({ username }: { username: string }) {
           onClick={onClick}
           className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#06c755] to-[#04a043] px-6 py-4 text-base font-extrabold text-white shadow-lg shadow-[#06c755]/30 active:scale-[0.97]"
         >
-          <MessageCircle className="h-5 w-5" />
+          <Image src="/icon_line.png" alt="" width={20} height={20} />
           LINEで詳細レポートを受け取る
         </button>
         <p className="mt-2 text-center text-[10px] text-text-muted">

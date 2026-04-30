@@ -145,18 +145,18 @@ export default function Home() {
             style={{ animationDelay: "1.0s", opacity: 0 }}
           >
             <p className="text-center text-[11px] font-bold uppercase tracking-[0.18em] text-gradient-blue sm:text-xs">
-              発信者情報開示請求とは
+              匿名の誹謗中傷は、もう逃げられない
             </p>
             <p className="mt-2 text-center text-[13px] font-medium text-text-sub sm:text-sm">
-              法的に検討できる選択肢
+              開示請求であなたができること
             </p>
 
             {/* Compact 3-col grid on mobile, larger on desktop */}
             <div className="mt-5 grid grid-cols-3 gap-2.5 sm:mt-6 sm:gap-3">
               {[
-                { emoji: "👤", title: "発信者の特定", desc: "氏名・住所が判明する場合" },
-                { emoji: "💰", title: "損害賠償請求", desc: "参考相場 30〜100万円" },
-                { emoji: "⚖️", title: "刑事手続の対象", desc: "侮辱罪の対象となりうる" },
+                { emoji: "👤", title: "身元を特定", desc: "氏名・住所が判明" },
+                { emoji: "💰", title: "慰謝料請求", desc: "30〜100万円" },
+                { emoji: "⚖️", title: "刑事責任", desc: "侮辱罪の対象" },
               ].map((item) => (
                 <div
                   key={item.title}
