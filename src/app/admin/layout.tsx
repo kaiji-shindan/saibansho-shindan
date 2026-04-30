@@ -6,6 +6,7 @@
 // ============================================================
 
 import Link from "next/link";
+import Image from "next/image";
 import { LayoutDashboard, Users, FileDown } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -23,11 +24,15 @@ export default function AdminLayout({
           <div className="flex h-full flex-col">
             {/* Brand */}
             <div className="flex items-center gap-2 border-b border-slate-200 px-5 py-4">
+              <Image
+                src="/logo_icon2.png"
+                alt="開示請求診断"
+                width={28}
+                height={28}
+                className="rounded-full"
+              />
               <span className="text-sm font-extrabold tracking-tight">
                 開示請求診断 <span className="text-violet-600">ADMIN</span>
-              </span>
-              <span className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
-                LAW FIRM
               </span>
             </div>
 
