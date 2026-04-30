@@ -246,3 +246,59 @@ input, textarea, select { font-size: 16px; }
 .glow-ring-blue {
   box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.08), 0 0 40px rgba(99, 102, 241, 0.1);
 }
+
+/* ===== Legal / long-form document styles ===== */
+.prose-legal {
+  font-size: 14px;
+  line-height: 1.85;
+  color: var(--color-foreground);
+}
+.prose-legal h2 {
+  margin-top: 2em;
+  margin-bottom: 0.6em;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  border-left: 4px solid var(--color-primary);
+  padding-left: 0.6em;
+}
+.prose-legal h3 {
+  margin-top: 1.6em;
+  margin-bottom: 0.4em;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-foreground);
+}
+.prose-legal p {
+  margin-top: 0.8em;
+  color: var(--color-text-sub);
+}
+.prose-legal ul, .prose-legal ol {
+  margin: 0.8em 0 0.8em 1.4em;
+  color: var(--color-text-sub);
+}
+.prose-legal ul { list-style: disc; }
+.prose-legal ol { list-style: decimal; }
+.prose-legal li { margin: 0.3em 0; }
+.prose-legal strong { color: var(--color-foreground); font-weight: 700; }
+.prose-legal a {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.prose-legal table {
+  width: 100%;
+  margin: 1em 0;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.prose-legal th, .prose-legal td {
+  border: 1px solid var(--color-border);
+  padding: 8px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+.prose-legal th {
+  background: var(--color-surface);
+  font-weight: 700;
+}

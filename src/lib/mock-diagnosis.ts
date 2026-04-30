@@ -1,10 +1,22 @@
 // ============================================================
-// Mock diagnosis generator — used when X/Claude keys are absent
-// or USE_MOCK=true. Same shape as real DiagnosisData.
+// Mock diagnosis generator
+//
+// 実 API キーが未設定 or USE_MOCK=true の時に使われる。
+// 方針:
+//   架空の数字だが、すべて X API Basic tier + Claude で実際に
+//   取得できる形のデータに限定する。実装後の UI と構造が一致する
+//   ようにする (実装と mock のスキーマは同一)。
 // ============================================================
 
 import { createHash } from "crypto";
-import type { DiagnosisData, Level, CategoryName, ClassifiedTweet } from "./diagnose-types";
+import type {
+  AnalysisData,
+  CategoryName,
+  ClassifiedTweet,
+  DiagnosisData,
+  Level,
+  ProfileData,
+} from "./diagnose-types";
 
 function mockHash(seed: string): string {
   return createHash("sha256").update(seed).digest("hex");
@@ -27,6 +39,77 @@ function buildMockHeatmap(seed: number): number[][] {
   return grid;
 }
 
+function buildMockProfile(username: string, seed: number): ProfileData {
+  const created = new Date(2020 + (seed % 5), (seed % 12), 1 + (seed % 27));
+  return {
+    username,
+    displayName: `${username.charAt(0).toUpperCase()}${username.slice(1)}`,
+    bio: "※ サンプル表示です。実環境では X API から実際の自己紹介文を取得します。",
+    profileImageUrl: undefined,
+    url: undefined,
+    isVerified: false, // mock は常に false。実 API 接続時に verified_type で判定
+    verifiedType: "none",
+    accountCreated: created.toLocaleDateString("ja-JP"),
+    accountCreatedIso: created.toISOString(),
+    followers: Math.max(120, (seed * 347) % 48000),
+    following: Math.max(50, (seed * 123) % 2400),
+    totalTweets: Math.max(200, (seed * 231) % 38000),
+    listed: Math.max(1, (seed * 43) % 480),
+  };
+}
+
+function buildMockAnalysis(seed: number, analyzedPosts: number): AnalysisData {
+  // 投稿頻度 (1日あたり)
+  const postsPerDay = parseFloat((1 + (seed % 8) + (seed % 10) / 10).toFixed(1));
+  const analyzedDays = Math.max(7, Math.round(analyzedPosts / Math.max(0.5, postsPerDay)));
+
+  // 時間帯分布 (JST 0-23)
+  const hourlyCounts: number[] = Array(24).fill(0);
+  const totalHours = analyzedPosts;
+  // Same realistic late-night skew as the heatmap
+  const weights = [3, 2, 1, 1, 1, 1, 2, 3, 3, 3, 3, 4, 5, 4, 3, 3, 4, 5, 6, 7, 7, 8, 9, 6];
+  const weightSum = weights.reduce((a, b) => a + b, 0);
+  for (let h = 0; h < 24; h++) {
+    hourlyCounts[h] = Math.round((weights[h] / weightSum) * totalHours);
+  }
+  const peakHour = hourlyCounts.indexOf(Math.max(...hourlyCounts));
+
+  // 投稿構成
+  const originalPct = 0.45 + (seed % 10) / 100;
+  const replyPct = 0.35 - (seed % 8) / 100;
+  const quotedPct = 1 - originalPct - replyPct;
+  const composition = {
+    original: Math.round(analyzedPosts * originalPct),
+    reply: Math.round(analyzedPosts * replyPct),
+    quoted: Math.max(0, Math.round(analyzedPosts * quotedPct)),
+  };
+
+  // メディア構成
+  const mediaPct = 0.18 + (seed % 12) / 100;
+  const linkPct = 0.12 + (seed % 8) / 100;
+  const media = {
+    withMedia: Math.round(analyzedPosts * mediaPct),
+    withLink: Math.round(analyzedPosts * linkPct),
+    textOnly: analyzedPosts - Math.round(analyzedPosts * mediaPct) - Math.round(analyzedPosts * linkPct),
+  };
+
+  return {
+    analyzedPosts,
+    analyzedDays,
+    postsPerDay,
+    peakHour,
+    hourlyCounts,
+    composition,
+    media,
+    topLanguage: "ja",
+    languages: [
+      { lang: "ja", count: Math.round(analyzedPosts * 0.92) },
+      { lang: "en", count: Math.round(analyzedPosts * 0.06) },
+      { lang: "und", count: Math.round(analyzedPosts * 0.02) },
+    ],
+  };
+}
+
 export function generateMockDiagnosis(username: string): DiagnosisData {
   const seed = username.length + username.charCodeAt(0);
   const score = Math.min(95, Math.max(12, (seed * 17 + 23) % 100));
@@ -39,8 +122,9 @@ export function generateMockDiagnosis(username: string): DiagnosisData {
   else if (score >= 25) level = "D";
   else level = "E";
 
-  const problemPosts = Math.max(3, (seed * 7) % 45);
-  const totalPosts = problemPosts + Math.max(50, (seed * 13) % 500);
+  // X API Basic tier は max_results=100 が上限。mock でもこれを厳守する。
+  const totalPosts = Math.min(100, Math.max(50, 50 + (seed * 13) % 50));
+  const problemPosts = Math.min(totalPosts, Math.max(3, (seed * 7) % Math.max(4, Math.floor(totalPosts / 3))));
 
   const categories: { name: CategoryName; count: number }[] = [
     { name: "名誉毀損", count: Math.max(1, Math.floor(problemPosts * 0.35)) },
@@ -61,7 +145,6 @@ export function generateMockDiagnosis(username: string): DiagnosisData {
       { text: "あの人って前科あるらしいよ（嘘の情報を流布）", category: "名誉毀損", severity: "high", date: "2026/03/10" },
       { text: "ブスすぎて草。こんな顔で外歩くなよ", category: "侮辱", severity: "medium", date: "2026/02/28" },
     ],
-    accountCreated: `${2020 + (seed % 5)}/0${1 + (seed % 9)}/15`,
     replyRatio: parseFloat((40 + (seed % 35)).toFixed(1)),
     mentionedUsers: [
       { handle: "user_a", count: Math.max(3, (seed * 4) % 25) },
@@ -79,6 +162,8 @@ export function generateMockDiagnosis(username: string): DiagnosisData {
       { month: "2月", count: Math.max(2, Math.floor(problemPosts * 0.3)) },
       { month: "3月", count: Math.max(3, Math.floor(problemPosts * 0.5)) },
     ],
+    profile: buildMockProfile(username, seed),
+    analysis: buildMockAnalysis(seed, totalPosts),
     evidence: ([
       {
         tweet_id: "mock_001",

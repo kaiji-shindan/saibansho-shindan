@@ -19,8 +19,8 @@ const items = [
   },
   {
     icon: HelpCircle,
-    label: "裁けるか分からない",
-    description: "何罪に該当するか判断できない",
+    label: "該当する条文が分からない",
+    description: "何罪に該当するかの判断が難しい",
     color: "text-blue-500",
     bg: "bg-blue-50",
     border: "border-blue-100",

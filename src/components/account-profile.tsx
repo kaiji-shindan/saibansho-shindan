@@ -1,69 +1,49 @@
 "use client";
 
+// ============================================================
+// AccountProfileCard
+//
+// X API /2/users/:username の公開フィールドのみを描画する。
+// 取得できないデータ (フォロワー増減 / 追跡開始日 / アカウントタイプ) は
+// 表示しない。認証バッジは verified_type が "none" 以外の時だけ表示。
+// ============================================================
+
 import { useState } from "react";
 import Image from "next/image";
-import { User, CheckCircle, ExternalLink } from "lucide-react";
-
-// ============================================================
-// Types
-// ============================================================
-export interface AccountProfile {
-  username: string;
-  displayName: string;
-  bio: string;
-  url: string;
-  isVerified: boolean;
-  isActive: boolean;
-  accountType: string;
-  followers: number;
-  following: number;
-  posts: number;
-  likes: number;
-  media: number;
-  listed: number;
-  followersChange: number;
-  trackingSince: string;
-}
-
-// ============================================================
-// Mock generator
-// ============================================================
-export function generateMockProfile(username: string): AccountProfile {
-  const s = username.length + username.charCodeAt(0);
-  return {
-    username,
-    displayName: `${username}のアカウント`,
-    bio: "このアカウントの投稿内容を独自エンジンで解析しています。実際のプロフィール情報はX API連携後に表示されます。",
-    url: "",
-    isVerified: s % 3 === 0,
-    isActive: true,
-    accountType: "個人",
-    followers: Math.max(100, (s * 347) % 50000),
-    following: Math.max(50, (s * 123) % 3000),
-    posts: Math.max(200, (s * 231) % 40000),
-    likes: Math.max(500, (s * 467) % 60000),
-    media: Math.max(10, (s * 89) % 3000),
-    listed: Math.max(1, (s * 43) % 500),
-    followersChange: ((s * 11) % 400) - 200,
-    trackingSince: "2026/03/15",
-  };
-}
+import { CheckCircle, ExternalLink, User } from "lucide-react";
+import type { ProfileData } from "@/lib/diagnose-types";
 
 // ============================================================
 // Avatar
 // ============================================================
-function ProfileAvatar({ username, size = 64 }: { username: string; size?: number }) {
+function ProfileAvatar({
+  username,
+  src,
+  size = 64,
+}: {
+  username: string;
+  src?: string;
+  size?: number;
+}) {
   const [err, setErr] = useState(false);
+  // X が返す profile_image_url は `_normal` (48px) が付くので、大きめを要求
+  const normalizedSrc =
+    src?.replace(/_normal(\.[a-z]+)$/i, "$1") ??
+    `https://unavatar.io/x/${username}`;
+
   if (err) {
     return (
-      <div className="flex items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-indigo-100" style={{ width: size, height: size }}>
+      <div
+        className="flex items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-indigo-100"
+        style={{ width: size, height: size }}
+      >
         <User className="text-blue-400" style={{ width: size * 0.45, height: size * 0.45 }} />
       </div>
     );
   }
   return (
     <Image
-      src={`https://unavatar.io/x/${username}`}
+      src={normalizedSrc}
       alt={`@${username}`}
       width={size}
       height={size}
@@ -77,16 +57,19 @@ function ProfileAvatar({ username, size = 64 }: { username: string; size?: numbe
 // ============================================================
 // Stat cell
 // ============================================================
-function StatCell({ value, label, color = "text-blue-600", change }: { value: number; label: string; color?: string; change?: number }) {
+function StatCell({
+  value,
+  label,
+  color = "text-blue-600",
+}: {
+  value: number;
+  label: string;
+  color?: string;
+}) {
   return (
     <div className="rounded-xl border border-border bg-white p-3.5">
       <p className={`text-xl font-extrabold leading-tight ${color}`}>
-        {value.toLocaleString()}
-        {change !== undefined && change !== 0 && (
-          <span className={`ml-1 text-xs font-bold ${change > 0 ? "text-emerald-500" : "text-red-400"}`}>
-            {change > 0 ? "+" : ""}{change}
-          </span>
-        )}
+        {value.toLocaleString("ja-JP")}
       </p>
       <p className="mt-0.5 text-[11px] font-medium text-text-muted">{label}</p>
     </div>
@@ -94,15 +77,36 @@ function StatCell({ value, label, color = "text-blue-600", change }: { value: nu
 }
 
 // ============================================================
+// Verification badge — verified_type に応じて色分け
+// ============================================================
+function VerifiedBadge({ type }: { type: ProfileData["verifiedType"] }) {
+  if (type === "none") return null;
+  const config = {
+    blue: { label: "Blue認証", bg: "bg-blue-50", border: "border-blue-200", text: "text-blue-600" },
+    business: { label: "ビジネス認証", bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-700" },
+    government: { label: "政府認証", bg: "bg-slate-100", border: "border-slate-300", text: "text-slate-700" },
+  }[type];
+  return (
+    <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${config.bg} ${config.border} ${config.text}`}>
+      {config.label}
+    </span>
+  );
+}
+
+// ============================================================
 // Component
 // ============================================================
-export function AccountProfileCard({ profile }: { profile: AccountProfile }) {
+export function AccountProfileCard({ profile }: { profile: ProfileData }) {
   return (
     <>
       {/* Profile card */}
       <div className="rounded-2xl border border-border bg-white p-4 sm:p-5">
         <div className="flex gap-4">
-          <ProfileAvatar username={profile.username} size={64} />
+          <ProfileAvatar
+            username={profile.username}
+            src={profile.profileImageUrl}
+            size={64}
+          />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
               <p className="truncate text-base font-extrabold">{profile.displayName}</p>
@@ -111,11 +115,18 @@ export function AccountProfileCard({ profile }: { profile: AccountProfile }) {
               )}
             </div>
             <p className="text-sm text-text-muted">@{profile.username}</p>
-            <p className="mt-2 text-xs leading-relaxed text-text-sub line-clamp-2">
-              {profile.bio}
-            </p>
+            {profile.bio && (
+              <p className="mt-2 text-xs leading-relaxed text-text-sub line-clamp-3">
+                {profile.bio}
+              </p>
+            )}
             {profile.url && (
-              <a href={profile.url} className="mt-1 inline-flex items-center gap-1 text-xs text-blue-500 hover:underline">
+              <a
+                href={profile.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1 inline-flex items-center gap-1 text-xs text-blue-500 hover:underline"
+              >
                 <ExternalLink className="h-3 w-3" />
                 {profile.url.replace(/^https?:\/\//, "")}
               </a>
@@ -125,33 +136,18 @@ export function AccountProfileCard({ profile }: { profile: AccountProfile }) {
 
         {/* Badges */}
         <div className="mt-4 flex flex-wrap gap-1.5">
-          {profile.isActive && (
-            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold text-emerald-600">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              アクティブ
-            </span>
-          )}
+          <VerifiedBadge type={profile.verifiedType} />
           <span className="rounded-full border border-border bg-surface px-2.5 py-0.5 text-[10px] font-semibold text-text-sub">
-            {profile.accountType}
-          </span>
-          {profile.isVerified && (
-            <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-[10px] font-bold text-blue-600">
-              Blue認証
-            </span>
-          )}
-          <span className="rounded-full border border-border bg-surface px-2.5 py-0.5 text-[10px] font-semibold text-text-sub">
-            追跡開始 {profile.trackingSince}
+            作成日 {profile.accountCreated}
           </span>
         </div>
       </div>
 
-      {/* Stats grid */}
-      <div className="mt-3 grid grid-cols-2 gap-1.5 sm:grid-cols-3 sm:gap-2">
-        <StatCell value={profile.followers} label="フォロワー" color="text-blue-600" change={profile.followersChange} />
+      {/* Stats grid — X API public_metrics の全 4 フィールド */}
+      <div className="mt-3 grid grid-cols-2 gap-1.5 sm:grid-cols-4 sm:gap-2">
+        <StatCell value={profile.followers} label="フォロワー" color="text-blue-600" />
         <StatCell value={profile.following} label="フォロー中" color="text-slate-700" />
-        <StatCell value={profile.posts} label="投稿" color="text-indigo-600" />
-        <StatCell value={profile.likes} label="いいね" color="text-rose-500" />
-        <StatCell value={profile.media} label="メディア" color="text-violet-600" />
+        <StatCell value={profile.totalTweets} label="総投稿数" color="text-indigo-600" />
         <StatCell value={profile.listed} label="リスト" color="text-cyan-600" />
       </div>
     </>

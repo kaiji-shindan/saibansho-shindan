@@ -35,8 +35,8 @@ const steps = [
   {
     num: "4",
     icon: UserCheck,
-    title: "弁護士に相談",
-    description: "証拠レポートで即相談可能",
+    title: "証拠レポート出力",
+    description: "詳細レポートをPDFで保存",
     color: "text-blue-500",
     bg: "bg-blue-50",
     border: "border-blue-100",

@@ -32,8 +32,8 @@ export function Mission() {
             </div>
             <h3 className="mt-4 text-base font-extrabold tracking-tight sm:text-lg">被害者の負担を、AIが代行</h3>
             <p className="mt-2 text-[13px] leading-relaxed text-text-sub">
-              スクショ・日付の記録・どの法律に該当するかの調査──。
-              証拠集めの重労働を全部AIに任せて、ボタン1つで弁護士に相談できる状態にします。
+              問題投稿の抽出、該当条文の整理、投稿行動データの可視化──。
+              情報の整理を AI が代行し、弁護士相談に必要な資料を一気に揃えられる状態にします。
             </p>
           </div>
           <div className="rounded-3xl border border-border bg-white/80 p-5 shadow-[0_4px_24px_-8px_rgba(15,23,42,0.06)] backdrop-blur-sm sm:p-6">

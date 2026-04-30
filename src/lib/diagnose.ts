@@ -13,15 +13,31 @@ import type { DiagnosisData } from "./diagnose-types";
 export interface DiagnoseOptions {
   /** Skip cache (force fresh fetch) */
   noCache?: boolean;
-  /** Force mock mode regardless of env */
+  /** Force mock mode regardless of env (dev/preview only) */
   forceMock?: boolean;
 }
 
+/**
+ * Mock は本番環境では絶対に使わない。
+ *   - NODE_ENV=production かつ X+Claude の env が揃っていれば実 API
+ *   - NODE_ENV=production かつ env 不足なら diagnose() が例外を投げる
+ *   - それ以外 (開発/プレビュー) で env 不足 or USE_MOCK=true or forceMock なら mock
+ */
 function shouldUseMock(forceMock?: boolean): boolean {
+  const isProd = process.env.NODE_ENV === "production";
+  if (isProd) return false;
   if (forceMock) return true;
   if (process.env.USE_MOCK === "true") return true;
   if (!isXConfigured() || !isClaudeConfigured()) return true;
   return false;
+}
+
+/** Thrown when we would need mock data but are running in production. */
+export class DiagnoseConfigError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "DiagnoseConfigError";
+  }
 }
 
 export async function diagnose(
@@ -31,9 +47,16 @@ export async function diagnose(
   const cleaned = username.replace(/^@/, "").trim();
   if (!cleaned) throw new Error("username is required");
 
-  // Mock mode short-circuit
+  // Mock mode short-circuit (dev/preview only)
   if (shouldUseMock(opts.forceMock)) {
     return generateMockDiagnosis(cleaned);
+  }
+
+  // Production: demand real credentials
+  if (!isXConfigured() || !isClaudeConfigured()) {
+    throw new DiagnoseConfigError(
+      "診断サービスが利用できません。管理者に連絡してください。",
+    );
   }
 
   // Cache hit

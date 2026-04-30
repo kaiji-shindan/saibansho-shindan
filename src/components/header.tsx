@@ -8,7 +8,6 @@ const navLinks = [
   { label: "診断する", href: "/" },
   { label: "特徴", href: "#features" },
   { label: "使い方", href: "#how-it-works" },
-  { label: "料金", href: "#pricing" },
   { label: "FAQ", href: "#faq" },
 ];
 

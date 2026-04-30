@@ -1,10 +1,23 @@
 // ============================================================
-// Score & level computation from classified tweets
+// 診断ビルダー
+//
+// 方針: X API + Claude で「確実に取得できる」データだけを使う。
+// 定性的な主観分類 (発信トーン / ジャンル / 安定度 等) は行わない。
 // ============================================================
 
 import { createHash } from "crypto";
-import type { XTweet, XUser } from "./x-api";
-import type { ClassifiedTweet, DiagnosisData, Level, CategoryName, EmotionProfile } from "./diagnose-types";
+import type { XTweet, XUser, VerifiedType } from "./x-api";
+import type {
+  ClassifiedTweet,
+  DiagnosisData,
+  Level,
+  CategoryName,
+  EmotionProfile,
+  ProfileData,
+  AnalysisData,
+  TweetComposition,
+  MediaComposition,
+} from "./diagnose-types";
 
 const SEVERITY_WEIGHT: Record<string, number> = {
   high: 10,
@@ -35,13 +48,135 @@ const HOSTILE_KEYWORDS = [
   "クソ",
 ];
 
+// ============================================================
+// Profile: X API の user オブジェクトをそのまま UI 用に整形
+// ============================================================
+export function buildProfile(user: XUser): ProfileData {
+  const metrics = user.public_metrics ?? {
+    followers_count: 0,
+    following_count: 0,
+    tweet_count: 0,
+    listed_count: 0,
+  };
+
+  const vt: VerifiedType = user.verified_type ?? (user.verified ? "blue" : "none");
+
+  return {
+    username: user.username,
+    displayName: user.name,
+    bio: user.description ?? "",
+    profileImageUrl: user.profile_image_url,
+    url: user.url,
+    isVerified: vt !== "none",
+    verifiedType: vt,
+    accountCreated: new Date(user.created_at).toLocaleDateString("ja-JP"),
+    accountCreatedIso: user.created_at,
+    followers: metrics.followers_count,
+    following: metrics.following_count,
+    totalTweets: metrics.tweet_count,
+    listed: metrics.listed_count,
+  };
+}
+
+// ============================================================
+// Analysis: 実ツイート配列から客観指標を算出
+// ============================================================
+export function buildAnalysis(tweets: XTweet[]): AnalysisData {
+  if (tweets.length === 0) {
+    return {
+      analyzedPosts: 0,
+      analyzedDays: 0,
+      postsPerDay: 0,
+      peakHour: 0,
+      hourlyCounts: Array(24).fill(0),
+      composition: { original: 0, reply: 0, quoted: 0 },
+      media: { textOnly: 0, withMedia: 0, withLink: 0 },
+      topLanguage: "unknown",
+      languages: [],
+    };
+  }
+
+  // 時間範囲
+  const times = tweets
+    .map((t) => new Date(t.created_at).getTime())
+    .filter((n) => !Number.isNaN(n))
+    .sort((a, b) => a - b);
+  const spanMs = times.length > 1 ? times[times.length - 1] - times[0] : 0;
+  const analyzedDays = Math.max(1, Math.round(spanMs / (1000 * 60 * 60 * 24)));
+  const postsPerDay = Math.round((tweets.length / analyzedDays) * 10) / 10;
+
+  // 時間帯分布 (JST)
+  const hourlyCounts: number[] = Array(24).fill(0);
+  for (const t of tweets) {
+    const d = new Date(t.created_at);
+    if (Number.isNaN(d.getTime())) continue;
+    // JST (UTC+9)
+    const jstHour = (d.getUTCHours() + 9) % 24;
+    hourlyCounts[jstHour] += 1;
+  }
+  const peakHour = hourlyCounts.indexOf(Math.max(...hourlyCounts));
+
+  // 投稿構成
+  const composition: TweetComposition = { original: 0, reply: 0, quoted: 0 };
+  for (const t of tweets) {
+    const isReply = Boolean(t.in_reply_to_user_id);
+    const isQuoted = t.referenced_tweets?.some((r) => r.type === "quoted") ?? false;
+    if (isQuoted) composition.quoted += 1;
+    else if (isReply) composition.reply += 1;
+    else composition.original += 1;
+  }
+
+  // メディア構成
+  const media: MediaComposition = { textOnly: 0, withMedia: 0, withLink: 0 };
+  for (const t of tweets) {
+    const hasMedia = (t.attachments?.media_keys?.length ?? 0) > 0;
+    const externalUrls = (t.entities?.urls ?? []).filter((u) => {
+      const target = u.expanded_url ?? u.url;
+      return !target.includes("x.com") && !target.includes("twitter.com") && !target.includes("t.co");
+    });
+    const hasLink = externalUrls.length > 0;
+    if (hasMedia) media.withMedia += 1;
+    else if (hasLink) media.withLink += 1;
+    else media.textOnly += 1;
+  }
+
+  // 言語分布
+  const langMap = new Map<string, number>();
+  for (const t of tweets) {
+    const lang = t.lang ?? "unknown";
+    langMap.set(lang, (langMap.get(lang) ?? 0) + 1);
+  }
+  const languages = Array.from(langMap.entries())
+    .map(([lang, count]) => ({ lang, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
+  const topLanguage = languages[0]?.lang ?? "unknown";
+
+  return {
+    analyzedPosts: tweets.length,
+    analyzedDays,
+    postsPerDay,
+    peakHour,
+    hourlyCounts,
+    composition,
+    media,
+    topLanguage,
+    languages,
+  };
+}
+
+// ============================================================
+// Heatmap / Emotion / Hash helpers (premium 用)
+// ============================================================
 function buildHeatmap(tweets: XTweet[]): number[][] {
-  // 7 days (Sun..Sat) × 24 hours
+  // 7 days (Sun..Sat) × 24 hours (JST)
   const grid: number[][] = Array.from({ length: 7 }, () => Array(24).fill(0));
   for (const t of tweets) {
     const d = new Date(t.created_at);
     if (Number.isNaN(d.getTime())) continue;
-    grid[d.getDay()][d.getHours()] += 1;
+    const jstMs = d.getTime() + 9 * 60 * 60 * 1000;
+    const jst = new Date(jstMs);
+    grid[jst.getUTCDay()][jst.getUTCHours()] += 1;
   }
   return grid;
 }
@@ -55,7 +190,6 @@ function aggregateEmotion(classified: ClassifiedTweet[]): EmotionProfile {
     total += 1;
   }
   if (total === 0) return counts;
-  // Normalize to 0-100
   const k: (keyof EmotionProfile)[] = ["anger", "contempt", "mockery", "threat", "sadness"];
   for (const key of k) {
     counts[key] = Math.round((counts[key] / total) * 100);
@@ -72,6 +206,9 @@ function attachHashes(classified: ClassifiedTweet[]): ClassifiedTweet[] {
   }));
 }
 
+// ============================================================
+// Main entry point
+// ============================================================
 export function buildDiagnosis(
   user: XUser,
   tweets: XTweet[],
@@ -79,8 +216,10 @@ export function buildDiagnosis(
 ): DiagnosisData {
   // Score: sum of severity weights, normalized to 0-100
   const rawScore = classified.reduce((acc, c) => acc + (SEVERITY_WEIGHT[c.severity] ?? 0), 0);
-  // Cap: 100 problem points max
-  const score = Math.min(100, Math.round((rawScore / Math.max(50, classified.length * 2)) * 100));
+  const score = Math.min(
+    100,
+    Math.round((rawScore / Math.max(50, classified.length * 2)) * 100),
+  );
   const level = levelFromScore(score);
 
   // Category aggregation
@@ -151,11 +290,12 @@ export function buildDiagnosis(
     problemPosts: problem.length,
     categories,
     topPosts: topPosts as DiagnosisData["topPosts"],
-    accountCreated: new Date(user.created_at).toLocaleDateString("ja-JP"),
     replyRatio,
     mentionedUsers,
     hostileKeywords,
     monthlyProblemPosts: monthly,
+    profile: buildProfile(user),
+    analysis: buildAnalysis(tweets),
     evidence: attachHashes(classified.filter((c) => c.severity !== "none")),
     emotionProfile: aggregateEmotion(classified),
     timeHeatmap: buildHeatmap(tweets),

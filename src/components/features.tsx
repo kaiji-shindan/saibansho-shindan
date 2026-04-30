@@ -1,52 +1,59 @@
 import {
   Brain,
-  Camera,
   MessageSquareWarning,
-  Mail,
+  BarChart3,
   FileCheck,
   Shield,
+  Clock,
 } from "lucide-react";
 
+// ============================================================
+// Features — X API Basic tier + Claude で実際に取得・計算できる機能のみ
+// ============================================================
 const features = [
   {
     icon: Brain,
-    title: "独自スコアリング",
-    description: "投稿を独自エンジンで解析し、名誉毀損・侮辱・脅迫の可能性を判定。",
+    title: "AI による投稿分類",
+    description:
+      "直近の公開投稿を Claude AI で名誉毀損・侮辱・脅迫・プライバシー侵害の 4 カテゴリに自動分類。",
     color: "text-blue-500",
     bg: "bg-blue-50",
   },
   {
     icon: MessageSquareWarning,
-    title: "投稿 & リプライ分析",
-    description: "公開投稿・リプライの問題発言を網羅的に洗い出し。",
+    title: "リスクレベル判定",
+    description: "独自のスコアリングで S〜E の 6 段階で開示請求レベルを即時判定。",
     color: "text-violet-500",
     bg: "bg-violet-50",
   },
   {
-    icon: Mail,
-    title: "DM分析",
-    description: "自分のXアカウントを連携して、受信DMの脅迫・中傷を抽出。",
+    icon: BarChart3,
+    title: "投稿パターン分析",
+    description:
+      "投稿頻度・時間帯・言語・メディア構成を実データから可視化。NG ワードの出現回数もカウント。",
     color: "text-indigo-500",
     bg: "bg-indigo-50",
   },
   {
-    icon: Camera,
-    title: "証拠の自動保全",
-    description: "問題投稿が消される前にスクショを自動保存。",
+    icon: Clock,
+    title: "アカウント情報の可視化",
+    description:
+      "フォロワー・フォロー・総投稿数・アカウント作成日などの公開プロフィール情報を一覧表示。",
     color: "text-blue-500",
     bg: "bg-blue-50",
   },
   {
     icon: FileCheck,
-    title: "開示請求テンプレ",
-    description: "弁護士監修の書式テンプレートと記入ガイドを提供。",
+    title: "開示請求書テンプレート",
+    description:
+      "発信者情報開示請求書の参考フォーマットを提供。ブラウザの印刷機能で PDF 保存可能。",
     color: "text-violet-500",
     bg: "bg-violet-50",
   },
   {
     icon: Shield,
-    title: "弁護士マッチング",
-    description: "証拠レポートをもとに、誹謗中傷に強い弁護士へ即相談。",
+    title: "証拠保全と検討材料の整理",
+    description: "公開投稿のスナップショットを構造化し、専門家への相談を検討する際の材料として整理します。",
     color: "text-indigo-500",
     bg: "bg-indigo-50",
   },
@@ -63,6 +70,9 @@ export function Features() {
           <h2 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl">
             できること
           </h2>
+          <p className="mt-2 text-xs text-text-muted">
+            ※ 分析対象は X の公開投稿に限定されます
+          </p>
         </div>
 
         <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

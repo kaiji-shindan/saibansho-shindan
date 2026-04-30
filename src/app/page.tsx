@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { ArrowRight, Loader2, Scale, Shield, Zap } from "lucide-react";
 import { parseUsername } from "@/lib/parse-username";
+import { AttributionCapture } from "@/components/attribution-capture";
 
 export default function Home() {
   const [username, setUsername] = useState("");
@@ -21,6 +22,7 @@ export default function Home() {
 
   return (
     <div className="relative flex min-h-screen flex-col overflow-hidden">
+      <AttributionCapture />
       {/* ===== Background ===== */}
       <div className="pointer-events-none fixed inset-0">
         <div className="bg-mesh-blue absolute inset-0" />
@@ -38,12 +40,14 @@ export default function Home() {
             開示請求<span className="text-gradient-blue">診断</span>
           </span>
         </div>
-        <a
-          href="/about"
-          className="inline-flex h-9 items-center rounded-full border border-border/80 bg-white/70 px-3.5 text-[12px] font-semibold text-text-sub backdrop-blur-sm transition-all active:scale-[0.96] sm:h-10 sm:px-4 sm:text-xs"
-        >
-          サービスについて
-        </a>
+        <nav className="flex items-center gap-1.5 sm:gap-2">
+          <a
+            href="/about"
+            className="inline-flex h-9 items-center rounded-full border border-border/80 bg-white/70 px-3.5 text-[12px] font-semibold text-text-sub backdrop-blur-sm transition-all active:scale-[0.96] sm:h-10 sm:px-4 sm:text-xs"
+          >
+            サービスについて
+          </a>
+        </nav>
       </header>
 
       {/* ===== Main ===== */}
@@ -122,7 +126,7 @@ export default function Home() {
           >
             {[
               { icon: Zap, label: "無料", color: "text-amber-600 bg-amber-50 border-amber-200/60" },
-              { icon: Shield, label: "弁護士監修", color: "text-blue-600 bg-blue-50 border-blue-200/60" },
+              { icon: Shield, label: "登録不要", color: "text-blue-600 bg-blue-50 border-blue-200/60" },
               { icon: Scale, label: "X API連携", color: "text-emerald-600 bg-emerald-50 border-emerald-200/60" },
             ].map((pill) => (
               <span
@@ -141,18 +145,18 @@ export default function Home() {
             style={{ animationDelay: "1.0s", opacity: 0 }}
           >
             <p className="text-center text-[11px] font-bold uppercase tracking-[0.18em] text-gradient-blue sm:text-xs">
-              匿名の誹謗中傷は、もう逃げられない
+              発信者情報開示請求とは
             </p>
             <p className="mt-2 text-center text-[13px] font-medium text-text-sub sm:text-sm">
-              開示請求であなたができること
+              法的に検討できる選択肢
             </p>
 
             {/* Compact 3-col grid on mobile, larger on desktop */}
             <div className="mt-5 grid grid-cols-3 gap-2.5 sm:mt-6 sm:gap-3">
               {[
-                { emoji: "👤", title: "身元を特定", desc: "氏名・住所が判明" },
-                { emoji: "💰", title: "慰謝料請求", desc: "30〜100万円" },
-                { emoji: "⚖️", title: "刑事責任", desc: "侮辱罪の対象" },
+                { emoji: "👤", title: "発信者の特定", desc: "氏名・住所が判明する場合" },
+                { emoji: "💰", title: "損害賠償請求", desc: "参考相場 30〜100万円" },
+                { emoji: "⚖️", title: "刑事手続の対象", desc: "侮辱罪の対象となりうる" },
               ].map((item) => (
                 <div
                   key={item.title}
@@ -211,6 +215,13 @@ export default function Home() {
             詳しく見る
           </a>
         </p>
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[10.5px] text-text-muted">
+          <a href="/terms" className="hover:text-text-sub">利用規約</a>
+          <span className="text-text-muted/40">·</span>
+          <a href="/privacy" className="hover:text-text-sub">プライバシーポリシー</a>
+          <span className="text-text-muted/40">·</span>
+          <a href="/tokushoho" className="hover:text-text-sub">特商法表記</a>
+        </div>
       </footer>
     </div>
   );
