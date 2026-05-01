@@ -60,11 +60,26 @@ export function useLineOpened(): [boolean, () => void] {
 }
 
 /**
+ * Resolve the URL we open when the user clicks "LINEで受け取る".
+ *
+ * If a LIFF ID is configured, we open the LIFF endpoint with the username
+ * pre-filled — that's the path that delivers a personalized message back
+ * via the Messaging API. Otherwise we fall back to the plain friend-add URL.
+ */
+function resolveLineDestination(username?: string): string {
+  const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
+  if (liffId && username) {
+    return `https://liff.line.me/${liffId}?username=${encodeURIComponent(username)}`;
+  }
+  return getLineAddUrl();
+}
+
+/**
  * Server-first click recorder. Fire-and-forget, never blocks UX.
  * Also sets the localStorage flag and opens the LINE add URL in a new tab.
  */
 export async function openLineAndMarkOpened(username?: string, markOpened?: () => void) {
-  const url = getLineAddUrl();
+  const url = resolveLineDestination(username);
   // Optimistically set local flags so the unlock happens immediately.
   if (typeof window !== "undefined") {
     window.localStorage.setItem(LINE_VERIFIED_STORAGE_KEY, LINE_VERIFIED_VALUE);

@@ -90,7 +90,24 @@ alter table diagnose_cache enable row level security;
 -- (既存ポリシーがある場合は何もしない)
 
 -- ------------------------------------------------------------
--- 4. 便利 View: キャンペーン別リード数
+-- 4. line_pending_links — LIFF→friend-add で username を保持
+--    LIFF で取得した LINE userId と診断対象 username を紐付け、
+--    follow webhook が来た時にパーソナライズメッセージを送るのに使う。
+-- ------------------------------------------------------------
+create table if not exists line_pending_links (
+  line_user_id     text primary key,
+  pending_username text not null,
+  display_name     text,
+  created_at       timestamptz not null default now()
+);
+
+create index if not exists line_pending_links_created_at_idx
+  on line_pending_links(created_at);
+
+alter table line_pending_links enable row level security;
+
+-- ------------------------------------------------------------
+-- 5. 便利 View: キャンペーン別リード数
 -- ------------------------------------------------------------
 create or replace view leads_by_campaign as
 select
