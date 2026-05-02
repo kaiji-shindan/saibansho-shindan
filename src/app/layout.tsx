@@ -50,12 +50,21 @@ export const metadata: Metadata = {
     type: "website",
     locale: "ja_JP",
     siteName: "開示請求診断",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "開示請求診断｜匿名の誹謗中傷は、もう逃げられない",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "開示請求診断｜匿名の誹謗中傷は、もう逃げられない",
     description:
       "気になるXアカウントを入力するだけ、開示請求レベルを診断します。誹謗中傷の問題投稿・カテゴリ別法令該当性・開示請求書テンプレートを無料で提供。",
+    images: ["/og-image.png"],
   },
   robots: {
     index: true,
