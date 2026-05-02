@@ -165,25 +165,23 @@ export default async function LeadsPage({
 
       {/* ===== Results table ===== */}
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-        <table className="w-full text-left text-xs">
+        <table className="w-full min-w-[1100px] text-left text-sm">
           <thead className="bg-slate-50 text-slate-600">
             <tr>
-              <th className="px-3 py-2 font-semibold">#</th>
-              <th className="px-3 py-2 font-semibold">種別</th>
-              <th className="px-3 py-2 font-semibold">Xアカウント</th>
-              <th className="px-3 py-2 font-semibold">フォロワー</th>
-              <th className="px-3 py-2 font-semibold">フォロー</th>
-              <th className="px-3 py-2 font-semibold">投稿</th>
-              <th className="px-3 py-2 font-semibold">キャンペーン</th>
-              <th className="px-3 py-2 font-semibold">IP</th>
-              <th className="px-3 py-2 font-semibold">日時</th>
-              <th className="px-3 py-2" />
+              <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold">#</th>
+              <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold">種別</th>
+              <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold">Xアカウント</th>
+              <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold">フォロワー</th>
+              <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold">フォロー</th>
+              <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold">投稿</th>
+              <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold">日時</th>
+              <th className="px-4 py-3" />
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td colSpan={10} className="px-4 py-10 text-center text-slate-400">
+                <td colSpan={8} className="px-4 py-10 text-center text-slate-400">
                   該当するリードがありません
                 </td>
               </tr>
@@ -196,10 +194,10 @@ export default async function LeadsPage({
                 : null;
               return (
                 <tr key={r.id} className="border-t border-slate-100 hover:bg-slate-50">
-                  <td className="px-3 py-2 font-mono text-slate-400">{r.id}</td>
-                  <td className="px-3 py-2">
+                  <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-slate-400">{r.id}</td>
+                  <td className="whitespace-nowrap px-4 py-3">
                     <span
-                      className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                      className={`whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-bold ${
                         r.kind === "diagnose"
                           ? "bg-violet-100 text-violet-700"
                           : r.kind === "line_click"
@@ -212,34 +210,34 @@ export default async function LeadsPage({
                       {r.kind}
                     </span>
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="whitespace-nowrap px-4 py-3">
                     {username ? (
                       <a
                         href={`https://x.com/${username}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-2 hover:underline"
+                        className="flex items-center gap-2.5 hover:underline"
                       >
                         {avatarUrl ? (
                           <Image
                             src={avatarUrl}
                             alt={`@${username}`}
-                            width={24}
-                            height={24}
+                            width={32}
+                            height={32}
                             unoptimized
-                            className="rounded-full bg-slate-100 object-cover"
+                            className="shrink-0 rounded-full bg-slate-100 object-cover"
                           />
                         ) : (
-                          <div className="h-6 w-6 rounded-full bg-slate-200" />
+                          <div className="h-8 w-8 shrink-0 rounded-full bg-slate-200" />
                         )}
-                        <div className="flex min-w-0 flex-col">
-                          <span className="flex items-center gap-1 truncate text-[11px] font-bold text-slate-800">
+                        <div className="flex min-w-0 max-w-[260px] flex-col">
+                          <span className="flex items-center gap-1 truncate text-sm font-bold text-slate-800">
                             {profile?.displayName ?? `@${username}`}
                             {profile?.isVerified && (
-                              <BadgeCheck className="h-3 w-3 text-blue-500" />
+                              <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-blue-500" />
                             )}
                           </span>
-                          <span className="truncate font-mono text-[10px] text-slate-500">
+                          <span className="truncate font-mono text-xs text-slate-500">
                             @{username}
                           </span>
                         </div>
@@ -248,32 +246,22 @@ export default async function LeadsPage({
                       <span className="text-slate-400">-</span>
                     )}
                   </td>
-                  <td className="px-3 py-2 font-mono text-[11px] text-slate-700">
+                  <td className="whitespace-nowrap px-4 py-3 font-mono text-sm text-slate-700">
                     {fmtCount(profile?.followers ?? null)}
                   </td>
-                  <td className="px-3 py-2 font-mono text-[11px] text-slate-700">
+                  <td className="whitespace-nowrap px-4 py-3 font-mono text-sm text-slate-700">
                     {fmtCount(profile?.following ?? null)}
                   </td>
-                  <td className="px-3 py-2 font-mono text-[11px] text-slate-700">
+                  <td className="whitespace-nowrap px-4 py-3 font-mono text-sm text-slate-700">
                     {fmtCount(profile?.totalTweets ?? null)}
                   </td>
-                  <td className="px-3 py-2 text-slate-600">
-                    {r.utm_campaign ? (
-                      <span className="rounded bg-amber-50 px-1.5 py-0.5 font-mono text-[10px] text-amber-700">
-                        {r.utm_campaign}
-                      </span>
-                    ) : (
-                      <span className="text-slate-400">-</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2 text-slate-500">{r.ip ?? "-"}</td>
-                  <td className="px-3 py-2 whitespace-nowrap text-slate-500">
+                  <td className="whitespace-nowrap px-4 py-3 text-xs text-slate-500">
                     {new Date(r.created_at).toLocaleString("ja-JP")}
                   </td>
-                  <td className="px-3 py-2 text-right">
+                  <td className="whitespace-nowrap px-4 py-3 text-right">
                     <Link
                       href={`/admin/leads/${r.id}`}
-                      className="text-[11px] font-semibold text-violet-600 hover:underline"
+                      className="text-xs font-semibold text-violet-600 hover:underline"
                     >
                       詳細 →
                     </Link>
