@@ -7,7 +7,7 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "nodejs";
-export const alt = "開示請求診断 — あの誹謗中傷、検討材料をAIで整理";
+export const alt = "開示請求診断｜匿名の誹謗中傷は、もう逃げられない";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -69,7 +69,7 @@ export default async function Image() {
               letterSpacing: -2,
             }}
           >
-            あの誹謗中傷、
+            匿名の誹謗中傷は、
           </div>
           <div
             style={{
@@ -81,7 +81,7 @@ export default async function Image() {
               color: "#a78bfa",
             }}
           >
-            検討材料をAIで整理
+            もう逃げられない
           </div>
           <div
             style={{
@@ -92,7 +92,7 @@ export default async function Image() {
               fontWeight: 500,
             }}
           >
-            Xアカウントを入力するだけで、開示請求の材料を無料整理
+            Xアカウントを入力するだけ、開示請求レベルを無料診断
           </div>
         </div>
 

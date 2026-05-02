@@ -20,21 +20,21 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "開示請求診断 | あの誹謗中傷、開示請求の検討材料を整理",
+    default: "開示請求診断｜匿名の誹謗中傷は、もう逃げられない",
     template: "%s | 開示請求診断",
   },
   description:
-    "Xアカウントを入力するだけ。独自エンジンが公開投稿を分析し、発信者情報開示請求の検討材料を無料で整理します。登録不要・完全無料。",
+    "気になるXアカウントを入力するだけ、開示請求レベルを診断します。独自エンジンが公開投稿を分析し、誹謗中傷の問題投稿・カテゴリ別法令該当性・開示請求書テンプレートを無料で提供します。",
   keywords: [
     "開示請求",
     "誹謗中傷",
     "発信者情報開示請求",
     "名誉毀損",
     "侮辱罪",
-    "弁護士",
     "X",
     "Twitter",
-    "診断",
+    "弁護士相談",
+    "誹謗中傷対策",
   ],
   icons: {
     icon: "/logo_icon.png",
@@ -44,17 +44,18 @@ export const metadata: Metadata = {
     canonical: "/",
   },
   openGraph: {
-    title: "開示請求診断 | 検討材料をAIで整理",
+    title: "開示請求診断｜匿名の誹謗中傷は、もう逃げられない",
     description:
-      "Xアカウントを入力するだけ。独自エンジンが公開投稿を分析し、開示請求の検討材料を無料で整理します。",
+      "気になるXアカウントを入力するだけ、開示請求レベルを診断します。独自エンジンが公開投稿を分析し、誹謗中傷の問題投稿・カテゴリ別法令該当性・開示請求書テンプレートを無料で提供します。",
     type: "website",
     locale: "ja_JP",
     siteName: "開示請求診断",
   },
   twitter: {
     card: "summary_large_image",
-    title: "開示請求診断 | 検討材料をAIで整理",
-    description: "Xアカウントの公開投稿をAIで分析し、開示請求の検討材料を無料で整理します。",
+    title: "開示請求診断｜匿名の誹謗中傷は、もう逃げられない",
+    description:
+      "気になるXアカウントを入力するだけ、開示請求レベルを診断します。誹謗中傷の問題投稿・カテゴリ別法令該当性・開示請求書テンプレートを無料で提供。",
   },
   robots: {
     index: true,
