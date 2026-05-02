@@ -18,9 +18,11 @@ export const runtime = "nodejs";
 
 const IS_PROD = process.env.NODE_ENV === "production";
 
-/** `?mock=1` は本番環境では無視される。開発/プレビューだけで有効。 */
+/** `?mock=1` is always allowed: mock data is harmless (no leads recording,
+ *  no X / Claude calls, no cache writes), so we let admins use it in prod
+ *  to preview the UI without burning credits. */
 function isMockQueryAllowed(): boolean {
-  return !IS_PROD;
+  return true;
 }
 
 function ensureSessionId(req: NextRequest): { sid: string; isNew: boolean } {

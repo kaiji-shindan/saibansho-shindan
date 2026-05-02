@@ -24,9 +24,11 @@ export interface DiagnoseOptions {
  *   - それ以外 (開発/プレビュー) で env 不足 or USE_MOCK=true or forceMock なら mock
  */
 function shouldUseMock(forceMock?: boolean): boolean {
-  const isProd = process.env.NODE_ENV === "production";
-  if (isProd) return false;
+  // forceMock is honoured everywhere — it lets admins preview the UI in
+  // production without consuming X / Claude credits. Mock responses skip
+  // recordLead and don't write to the cache, so they don't pollute analytics.
   if (forceMock) return true;
+  if (process.env.NODE_ENV === "production") return false;
   if (process.env.USE_MOCK === "true") return true;
   if (!isXConfigured() || !isClaudeConfigured()) return true;
   return false;

@@ -4,8 +4,46 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { BadgeCheck } from "lucide-react";
-import { searchLeads, getProfileSnapshots, type LeadKind } from "@/lib/leads";
+import { BadgeCheck, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { searchLeads, getProfileSnapshots, type LeadKind, type LeadRow } from "@/lib/leads";
+
+type SortKey = "id" | "kind" | "username" | "followers" | "following" | "tweets" | "date";
+type SortDir = "asc" | "desc";
+
+function sortLeads(
+  rows: LeadRow[],
+  profiles: Map<string, { followers: number | null; following: number | null; totalTweets: number | null }>,
+  sort: SortKey,
+  dir: SortDir,
+): LeadRow[] {
+  const factor = dir === "asc" ? 1 : -1;
+  const rank = (a: number | null | undefined): number =>
+    a == null ? Number.NEGATIVE_INFINITY : a;
+  return [...rows].sort((a, b) => {
+    switch (sort) {
+      case "id":
+        return (a.id - b.id) * factor;
+      case "kind":
+        return a.kind.localeCompare(b.kind) * factor;
+      case "username":
+        return (a.query_username ?? "").localeCompare(b.query_username ?? "") * factor;
+      case "followers":
+        return (rank(profiles.get(a.query_username ?? "")?.followers) -
+          rank(profiles.get(b.query_username ?? "")?.followers)) * factor;
+      case "following":
+        return (rank(profiles.get(a.query_username ?? "")?.following) -
+          rank(profiles.get(b.query_username ?? "")?.following)) * factor;
+      case "tweets":
+        return (rank(profiles.get(a.query_username ?? "")?.totalTweets) -
+          rank(profiles.get(b.query_username ?? "")?.totalTweets)) * factor;
+      case "date":
+      default:
+        return (
+          (new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) * factor
+        );
+    }
+  });
+}
 
 function fmtCount(n: number | null): string {
   if (n == null) return "-";
@@ -33,6 +71,8 @@ interface SearchParams {
   to?: string;        // ISO date
   campaign?: string;
   page?: string;
+  sort?: string;      // id|kind|username|followers|following|tweets|date
+  dir?: string;       // asc|desc
 }
 
 function buildQuery(base: SearchParams, override: Partial<SearchParams>): string {
@@ -82,7 +122,40 @@ export default async function LeadsPage({
     rows.map((r) => r.query_username ?? "").filter(Boolean),
   );
 
+  // Apply sort (post-fetch — the page size is small enough that this is fine)
+  const sortKey = (sp.sort ?? "date") as SortKey;
+  const sortDir = (sp.dir ?? "desc") as SortDir;
+  const sortedRows = sortLeads(rows, profiles, sortKey, sortDir);
+
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  // Sortable column header helper
+  function SortLink({ column, label }: { column: SortKey; label: string }) {
+    const isActive = sortKey === column;
+    const nextDir: SortDir = isActive && sortDir === "desc" ? "asc" : "desc";
+    const href =
+      "/admin/leads" +
+      buildQuery(sp, { sort: column, dir: nextDir, page: "1" });
+    return (
+      <Link
+        href={href}
+        className={`inline-flex items-center gap-1 hover:text-violet-600 ${
+          isActive ? "text-violet-700" : "text-slate-600"
+        }`}
+      >
+        {label}
+        {isActive ? (
+          sortDir === "asc" ? (
+            <ArrowUp className="h-3 w-3" />
+          ) : (
+            <ArrowDown className="h-3 w-3" />
+          )
+        ) : (
+          <ArrowUpDown className="h-3 w-3 opacity-40" />
+        )}
+      </Link>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -168,25 +241,39 @@ export default async function LeadsPage({
         <table className="w-full min-w-[1100px] text-left text-sm">
           <thead className="bg-slate-50 text-slate-600">
             <tr>
-              <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold">#</th>
-              <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold">種別</th>
-              <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold">Xアカウント</th>
-              <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold">フォロワー</th>
-              <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold">フォロー</th>
-              <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold">投稿</th>
-              <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold">日時</th>
+              <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold">
+                <SortLink column="id" label="#" />
+              </th>
+              <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold">
+                <SortLink column="kind" label="種別" />
+              </th>
+              <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold">
+                <SortLink column="username" label="Xアカウント" />
+              </th>
+              <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold">
+                <SortLink column="followers" label="フォロワー" />
+              </th>
+              <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold">
+                <SortLink column="following" label="フォロー" />
+              </th>
+              <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold">
+                <SortLink column="tweets" label="投稿" />
+              </th>
+              <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold">
+                <SortLink column="date" label="日時" />
+              </th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
           <tbody>
-            {rows.length === 0 && (
+            {sortedRows.length === 0 && (
               <tr>
                 <td colSpan={8} className="px-4 py-10 text-center text-slate-400">
                   該当するリードがありません
                 </td>
               </tr>
             )}
-            {rows.map((r) => {
+            {sortedRows.map((r) => {
               const username = r.query_username ?? "";
               const profile = username ? profiles.get(username) : undefined;
               const avatarUrl = username

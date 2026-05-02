@@ -195,7 +195,17 @@ export function PremiumClient({ username }: { username: string }) {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch(`/api/diagnose/${encodeURIComponent(username)}`);
+        const passthrough = new URLSearchParams();
+        if (typeof window !== "undefined") {
+          const cur = new URLSearchParams(window.location.search);
+          for (const k of ["mock", "nocache"]) {
+            const v = cur.get(k);
+            if (v) passthrough.set(k, v);
+          }
+        }
+        const qs = passthrough.toString();
+        const url = `/api/diagnose/${encodeURIComponent(username)}${qs ? `?${qs}` : ""}`;
+        const res = await fetch(url);
         const json = (await res.json()) as { ok: boolean; data?: DiagnosisData; error?: string };
         if (cancelled) return;
         if (json.ok && json.data) {

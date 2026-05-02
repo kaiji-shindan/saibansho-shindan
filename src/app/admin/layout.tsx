@@ -7,7 +7,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { LayoutDashboard, Users, FileDown } from "lucide-react";
+import { LayoutDashboard, Users, FileDown, Eye } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +59,13 @@ export default function AdminLayout({
                 <FileDown className="h-4 w-4" />
                 CSV エクスポート
               </a>
+              <Link
+                href="/admin/preview"
+                className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-900"
+              >
+                <Eye className="h-4 w-4" />
+                UI プレビュー
+              </Link>
             </nav>
 
             {/* Footer note */}

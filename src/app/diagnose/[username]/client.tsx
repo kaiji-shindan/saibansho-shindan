@@ -157,7 +157,19 @@ export function DiagnoseClient({ username }: { username: string }) {
       let fetchError: string | null = null;
 
       try {
-        const res = await fetch(`/api/diagnose/${encodeURIComponent(username)}`);
+        // Forward ?mock=1 / ?nocache=1 from the page URL to the API so
+        // admin previews can use the same query string convention.
+        const passthrough = new URLSearchParams();
+        if (typeof window !== "undefined") {
+          const cur = new URLSearchParams(window.location.search);
+          for (const k of ["mock", "nocache"]) {
+            const v = cur.get(k);
+            if (v) passthrough.set(k, v);
+          }
+        }
+        const qs = passthrough.toString();
+        const url = `/api/diagnose/${encodeURIComponent(username)}${qs ? `?${qs}` : ""}`;
+        const res = await fetch(url);
         const json = (await res.json()) as { ok: boolean; data?: DiagnosisData; error?: string };
         if (json.ok && json.data) {
           hydrated = hydrateDiagnosis(json.data);

@@ -18,10 +18,21 @@ export const dynamic = "force-dynamic";
 
 export default async function PremiumPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ username: string }>;
+  searchParams: Promise<{ mock?: string }>;
 }) {
   const { username } = await params;
+  const sp = await searchParams;
+
+  // ?mock=1 は admin の UI プレビュー用。X OAuth ガードをスキップして
+  // モックデータでそのまま表示する（PremiumClient 内で /api/diagnose?mock=1
+  // が呼ばれるため、X / Anthropic / Supabase は一切叩かれない）。
+  if (sp.mock === "1") {
+    return <PremiumClient username={username} />;
+  }
+
   const cookieStore = await cookies();
   const xHandle = cookieStore.get("kaiji_x_handle")?.value;
 
