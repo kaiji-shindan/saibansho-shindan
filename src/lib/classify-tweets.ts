@@ -5,8 +5,36 @@
 // ============================================================
 
 import Anthropic from "@anthropic-ai/sdk";
-import type { XTweet } from "./x-api";
+import type { XTweet, XReferencedTweet } from "./x-api";
 import type { ClassifiedTweet, CategoryName, Severity, DominantEmotion } from "./diagnose-types";
+
+export interface ClassifyContext {
+  /** Map of tweet id → referenced tweet content (reply parent / quoted tweet). */
+  referencedById?: Map<string, XReferencedTweet>;
+}
+
+/** Resolve the canonical body text for a tweet, preferring note_tweet (>280 chars). */
+function bodyOf(t: XTweet): string {
+  return (t.note_tweet?.text ?? t.text).replace(/\s+/g, " ").trim();
+}
+
+/** Build the prompt block for a single tweet, optionally with reference context. */
+function tweetBlock(t: XTweet, idx: number, ctx?: ClassifyContext): string {
+  const body = bodyOf(t);
+  let block = `[${idx}] tweet_id: ${t.id}\n${body}`;
+  const refRel = t.referenced_tweets?.find(
+    (r) => r.type === "replied_to" || r.type === "quoted",
+  );
+  if (refRel && ctx?.referencedById) {
+    const ref = ctx.referencedById.get(refRel.id);
+    if (ref) {
+      const refText = (ref.note_tweet?.text ?? ref.text).replace(/\s+/g, " ").trim().slice(0, 220);
+      const label = refRel.type === "replied_to" ? "返信先" : "引用元";
+      block += `\n[${label}: ${refText}]`;
+    }
+  }
+  return block;
+}
 
 const MODEL = "claude-haiku-4-5-20251001";
 const BATCH_SIZE = 20;
@@ -86,12 +114,15 @@ function chunk<T>(arr: T[], size: number): T[][] {
   return out;
 }
 
-async function classifyBatch(client: Anthropic, batch: XTweet[]): Promise<ClassifyOutput[]> {
+async function classifyBatch(
+  client: Anthropic,
+  batch: XTweet[],
+  ctx?: ClassifyContext,
+): Promise<ClassifyOutput[]> {
   const userMessage =
-    `次の${batch.length}件の投稿を分類してください。\n\n` +
-    batch
-      .map((t, i) => `[${i + 1}] tweet_id: ${t.id}\n${t.text.replace(/\s+/g, " ").trim()}`)
-      .join("\n\n");
+    `次の${batch.length}件の投稿を分類してください。\n` +
+    `※ 角括弧 [返信先: …] [引用元: …] は文脈情報であり、分類対象は本文のみです。\n\n` +
+    batch.map((t, i) => tweetBlock(t, i + 1, ctx)).join("\n\n");
 
   const res = await client.messages.create({
     model: MODEL,
@@ -114,7 +145,10 @@ async function classifyBatch(client: Anthropic, batch: XTweet[]): Promise<Classi
  * Classify all tweets, batched for efficiency.
  * Returns one ClassifiedTweet per input tweet (in input order, best-effort).
  */
-export async function classifyTweets(tweets: XTweet[]): Promise<ClassifiedTweet[]> {
+export async function classifyTweets(
+  tweets: XTweet[],
+  ctx?: ClassifyContext,
+): Promise<ClassifiedTweet[]> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
 
@@ -122,16 +156,20 @@ export async function classifyTweets(tweets: XTweet[]): Promise<ClassifiedTweet[
   const batches = chunk(tweets, BATCH_SIZE);
 
   // Process batches in parallel (Claude rate limits are generous for Haiku)
-  const results = await Promise.all(batches.map((b) => classifyBatch(client, b)));
+  const results = await Promise.all(batches.map((b) => classifyBatch(client, b, ctx)));
   const flat = results.flat();
 
   // Map back to ClassifiedTweet (joined with original tweet metadata)
   const byId = new Map(flat.map((r) => [r.tweet_id, r]));
   return tweets.map((t) => {
     const c = byId.get(t.id);
+    // Use the long-form body (>280 chars) when present so the UI shows the full
+    // text. score.enrichClassified will overwrite metrics anyway, but we still
+    // populate them here so the function works standalone (e.g. tests).
+    const canonicalText = t.note_tweet?.text ?? t.text;
     return {
       tweet_id: t.id,
-      text: t.text,
+      text: canonicalText,
       created_at: t.created_at,
       category: c?.category ?? "該当なし",
       severity: c?.severity ?? "none",
@@ -143,6 +181,8 @@ export async function classifyTweets(tweets: XTweet[]): Promise<ClassifiedTweet[
         likes: t.public_metrics.like_count,
         rt: t.public_metrics.retweet_count,
         reply: t.public_metrics.reply_count,
+        impressions: t.public_metrics.impression_count,
+        bookmarks: t.public_metrics.bookmark_count,
       },
     };
   });

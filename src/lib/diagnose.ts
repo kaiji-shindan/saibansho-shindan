@@ -3,7 +3,11 @@
 // Falls back to mock data when keys are missing or USE_MOCK=true.
 // ============================================================
 
-import { getRecentTweets, getUserByUsername, isXConfigured } from "./x-api";
+import {
+  getRecentTweetsWithIncludes,
+  getUserByUsername,
+  isXConfigured,
+} from "./x-api";
 import { classifyTweets, generateSummary, isClaudeConfigured } from "./classify-tweets";
 import { buildDiagnosis } from "./score";
 import { generateMockDiagnosis } from "./mock-diagnosis";
@@ -67,18 +71,27 @@ export async function diagnose(
     if (hit) return hit;
   }
 
-  // Fresh analysis
-  const user = await getUserByUsername(cleaned);
-  const tweets = await getRecentTweets(user.id, 100);
+  // Fresh analysis. Pinned tweet comes back inline via `expansions=pinned_tweet_id`
+  // on the user lookup, so this is still just two billable X API calls
+  // (user lookup + timeline) — same as before.
+  const { user, pinnedTweet } = await getUserByUsername(cleaned);
+  const { tweets, mediaByKey, referencedById, usersById } =
+    await getRecentTweetsWithIncludes(user.id, 100);
+
   if (tweets.length === 0) {
     // Empty timeline → return a low-risk diagnosis
-    const empty = buildDiagnosis(user, [], []);
+    const empty = buildDiagnosis(user, [], [], { pinnedTweet });
     await setCached(cleaned, empty);
     return empty;
   }
 
-  const classified = await classifyTweets(tweets);
-  const data = buildDiagnosis(user, tweets, classified);
+  const classified = await classifyTweets(tweets, { referencedById });
+  const data = buildDiagnosis(user, tweets, classified, {
+    mediaByKey,
+    referencedById,
+    usersById,
+    pinnedTweet,
+  });
 
   // Generate AI summary in parallel-friendly fashion (best effort)
   try {

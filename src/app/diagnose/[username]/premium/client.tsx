@@ -30,6 +30,11 @@ import {
   Gavel,
   Scroll,
   PiggyBank,
+  Reply,
+  Quote,
+  ImageIcon,
+  AlertOctagon,
+  Tag,
   type LucideIcon,
 } from "lucide-react";
 import type { DiagnosisData, ClassifiedTweet, Severity, Level, CategoryName } from "@/lib/diagnose-types";
@@ -787,7 +792,7 @@ export function PremiumClient({ username }: { username: string }) {
         {/* ===== 8. Account profile + analysis (de-emphasized, bottom) ===== */}
         <div className="mt-8">
           <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-text-muted">アカウント情報</p>
-          <AccountProfileCard profile={data.profile} />
+          <AccountProfileCard profile={data.profile} showPinned />
         </div>
         <div className="mt-5">
           <AccountAnalysisCard analysis={data.analysis} />
@@ -877,14 +882,35 @@ function EvidenceCard({ idx, ev, username }: { idx: number; ev: ClassifiedTweet;
     ? "#"
     : `https://x.com/${encodeURIComponent(username)}/status/${ev.tweet_id}`;
 
+  const ref = ev.referencedTweet;
+  const refLabel = ref?.type === "replied_to" ? "返信先" : "引用元";
+  const RefIcon = ref?.type === "replied_to" ? Reply : Quote;
+
   return (
     <article className="overflow-hidden rounded-2xl border border-border bg-white shadow-[0_2px_12px_-4px_rgba(15,23,42,0.06)]">
-      <div className="flex items-center gap-2 border-b border-border/70 bg-surface/50 px-4 py-2.5">
+      <div className="flex flex-wrap items-center gap-2 border-b border-border/70 bg-surface/50 px-4 py-2.5">
         <span className="text-[11px] font-extrabold text-text-muted">#{id}</span>
         <span className={`rounded-md border px-2 py-0.5 text-[10px] font-extrabold ${sev.bg} ${sev.text} ${sev.border}`}>
           {sev.label}
         </span>
         <span className="text-[11px] font-bold text-text-sub">{ev.category}</span>
+        {ev.isLongForm && (
+          <span
+            className="rounded-md bg-indigo-50 px-1.5 py-0.5 text-[9px] font-extrabold text-indigo-700"
+            title="280字超のロングポスト"
+          >
+            LONG
+          </span>
+        )}
+        {ev.possiblySensitive && (
+          <span
+            className="inline-flex items-center gap-0.5 rounded-md bg-rose-50 px-1.5 py-0.5 text-[9px] font-extrabold text-rose-700"
+            title="X 自身がセンシティブと判定"
+          >
+            <AlertOctagon className="h-2.5 w-2.5" />
+            SENSITIVE
+          </span>
+        )}
         {ev.applicable_law && (
           <span
             className="ml-auto inline-flex items-center gap-1 rounded-md bg-violet-50 px-2 py-0.5 text-[10px] font-extrabold text-violet-700"
@@ -901,6 +927,7 @@ function EvidenceCard({ idx, ev, username }: { idx: number; ev: ClassifiedTweet;
           <span>
             <Clock className="mr-1 inline h-3 w-3" />
             {dateStr}
+            {ev.source && <span className="ml-2 text-[10px] text-text-muted">via {ev.source}</span>}
           </span>
           {ev.emotion && (
             <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${EMOTION_META[ev.emotion]?.bg ?? "bg-slate-100"}`}>
@@ -909,17 +936,68 @@ function EvidenceCard({ idx, ev, username }: { idx: number; ev: ClassifiedTweet;
             </span>
           )}
         </div>
-        <p className="mt-2 rounded-xl bg-surface px-3.5 py-3 text-[13px] leading-relaxed text-foreground">{ev.text}</p>
+        {ref && (
+          <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+            <p className="flex items-center gap-1 text-[10px] font-bold text-slate-500">
+              <RefIcon className="h-3 w-3" />
+              {refLabel}
+              {ref.authorUsername && (
+                <span className="font-mono text-slate-600">@{ref.authorUsername}</span>
+              )}
+              {ref.authorName && <span className="text-slate-500">（{ref.authorName}）</span>}
+            </p>
+            <p className="mt-1 text-[12px] leading-relaxed text-slate-700 line-clamp-3">{ref.text}</p>
+            {(ref.likes !== undefined || ref.rt !== undefined) && (
+              <p className="mt-1 flex gap-2 text-[10px] text-slate-500">
+                {ref.likes !== undefined && <span>♥ {ref.likes}</span>}
+                {ref.rt !== undefined && <span>↻ {ref.rt}</span>}
+              </p>
+            )}
+          </div>
+        )}
+        <p className="mt-2 rounded-xl bg-surface px-3.5 py-3 text-[13px] leading-relaxed text-foreground whitespace-pre-wrap">
+          {ev.text}
+        </p>
+        {ev.media && ev.media.length > 0 && (
+          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {ev.media.slice(0, 6).map((m, i) =>
+              m.previewImageUrl ? (
+                // X の preview_image_url は CDN 上で安定なので next/image でなく <img> で十分
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={i}
+                  src={m.previewImageUrl}
+                  alt={m.altText ?? `media ${i + 1}`}
+                  className="aspect-video w-full rounded-lg border border-border object-cover"
+                />
+              ) : (
+                <div
+                  key={i}
+                  className="flex aspect-video w-full items-center justify-center rounded-lg border border-border bg-surface text-[10px] text-text-muted"
+                >
+                  <ImageIcon className="mr-1 h-3 w-3" />
+                  {m.type}
+                </div>
+              ),
+            )}
+          </div>
+        )}
         {ev.reasoning && (
           <p className="mt-2 text-[11px] leading-relaxed text-text-muted">
             <span className="font-bold text-text-sub">AI判定根拠:</span> {ev.reasoning}
           </p>
         )}
-        <div className="mt-3 flex items-center justify-between text-[11px] text-text-muted">
-          <div className="flex items-center gap-3">
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[11px] text-text-muted">
+          <div className="flex flex-wrap items-center gap-3">
             <span>♥ {ev.metrics.likes}</span>
             <span>↻ {ev.metrics.rt}</span>
             <span>↩ {ev.metrics.reply}</span>
+            {ev.metrics.impressions !== undefined && (
+              <span>👁 {ev.metrics.impressions.toLocaleString()}</span>
+            )}
+            {ev.metrics.bookmarks !== undefined && ev.metrics.bookmarks > 0 && (
+              <span>🔖 {ev.metrics.bookmarks}</span>
+            )}
           </div>
           {ev.tags.length > 0 && (
             <div className="flex flex-wrap items-center justify-end gap-1.5">
@@ -934,6 +1012,20 @@ function EvidenceCard({ idx, ev, username }: { idx: number; ev: ClassifiedTweet;
             </div>
           )}
         </div>
+        {ev.contextTopics && ev.contextTopics.length > 0 && (
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            <Tag className="h-3 w-3 text-text-muted" />
+            {ev.contextTopics.slice(0, 4).map((c, i) => (
+              <span
+                key={`${c.domain}-${c.entity}-${i}`}
+                className="rounded-full border border-blue-100 bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700"
+                title={c.domain}
+              >
+                {c.entity}
+              </span>
+            ))}
+          </div>
+        )}
         {ev.hash && (
           <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50/50 px-2.5 py-1.5">
             <p className="flex items-center gap-1 text-[9px] font-bold text-emerald-700">

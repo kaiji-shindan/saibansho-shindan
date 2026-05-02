@@ -55,6 +55,22 @@ function buildMockProfile(username: string, seed: number): ProfileData {
     following: Math.max(50, (seed * 123) % 2400),
     totalTweets: Math.max(200, (seed * 231) % 38000),
     listed: Math.max(1, (seed * 43) % 480),
+    isProtected: false,
+    bioEntities: {
+      urls: [],
+      hashtags: [],
+      mentions: [],
+    },
+    pinnedTweet: {
+      id: "mock_pinned",
+      text: "新規フォロワーさん、はじめまして。よろしくお願いします。",
+      createdAt: "2026-01-12T08:00:00.000Z",
+      likes: 42,
+      rt: 5,
+      reply: 3,
+      quote: 1,
+      isLongForm: false,
+    },
   };
 }
 

@@ -20,6 +20,14 @@ import {
   Gavel,
   Scroll,
   PiggyBank,
+  FileSearch,
+  Quote,
+  ImageIcon,
+  Sparkles,
+  Pin,
+  CalendarClock,
+  FileDown,
+  Lock,
   type LucideIcon,
 } from "lucide-react";
 import { AccountProfileCard } from "@/components/account-profile";
@@ -569,6 +577,87 @@ export function DiagnoseClient({ username }: { username: string }) {
               ))}
             </div>
           </div>
+        </div>
+
+        {/* ===== 4.9 LINE 追加で見られるもの — 価値の事前提示 ===== */}
+        <div className="mt-5 rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-emerald-50/40 p-5 sm:p-6">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1 rounded-full bg-[#06c755] px-2.5 py-0.5 text-[10px] font-extrabold text-white">
+              <Lock className="h-3 w-3" />
+              LINE登録で解放
+            </span>
+            <p className="text-[11px] font-bold text-emerald-700">無料・1タップ</p>
+          </div>
+          <h3 className="mt-2 text-base sm:text-lg font-extrabold tracking-tight text-emerald-900">
+            ここから先は登録者だけに見える詳細レポート
+          </h3>
+          <p className="mt-1 text-xs text-emerald-800/80">
+            上記の概況に加えて、開示請求の準備に必要な「個別証拠」が一覧化されます。
+          </p>
+
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {(
+              [
+                {
+                  Icon: FileSearch,
+                  label: "問題投稿の全件リスト",
+                  desc: "投稿日時・本文・カテゴリ・該当法令・判定根拠まで全件を表示",
+                },
+                {
+                  Icon: Quote,
+                  label: "返信元・引用元の文脈",
+                  desc: "返信先や引用元の投稿も併せて表示し、攻撃の背景を可視化",
+                },
+                {
+                  Icon: ImageIcon,
+                  label: "添付メディアのプレビュー",
+                  desc: "画像・動画つき投稿はサムネイルと alt テキストも保存",
+                },
+                {
+                  Icon: Sparkles,
+                  label: "Claude による総評",
+                  desc: "アカウント全体の発信傾向と感情プロファイルを文章で要約",
+                },
+                {
+                  Icon: CalendarClock,
+                  label: "投稿ヒートマップ",
+                  desc: "曜日 × 時間帯の投稿頻度。問題行動が起きやすい時間帯まで把握",
+                },
+                {
+                  Icon: Pin,
+                  label: "ピン留め投稿の解析",
+                  desc: "プロフィール上で本人が固定している投稿の文面と反応数",
+                },
+                {
+                  Icon: FileText,
+                  label: "改ざん証拠ハッシュ",
+                  desc: "各投稿に SHA-256 ハッシュと取得時刻を付与し証拠性を担保",
+                },
+                {
+                  Icon: FileDown,
+                  label: "開示請求書テンプレート",
+                  desc: "プロバイダ責任制限法に沿った様式を診断結果から自動生成",
+                },
+              ] as { Icon: LucideIcon; label: string; desc: string }[]
+            ).map(({ Icon, label, desc }) => (
+              <div
+                key={label}
+                className="flex items-start gap-3 rounded-xl border border-emerald-100 bg-white/80 p-3"
+              >
+                <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-100">
+                  <Icon className="h-4 w-4 text-emerald-700" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[13px] font-extrabold text-emerald-900">{label}</p>
+                  <p className="mt-0.5 text-[11px] leading-relaxed text-emerald-800/70">{desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <p className="mt-4 text-center text-[11px] text-emerald-800/70">
+            ↓ LINE 友だち追加で、@{username} 専用の詳細レポートが届きます
+          </p>
         </div>
 
         {/* ===== 5. LINE gate — 旧: 月額500円 paywall ===== */}

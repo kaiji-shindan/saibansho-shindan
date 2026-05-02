@@ -60,8 +60,16 @@ export async function setCached(username: string, data: DiagnosisData): Promise<
   memCache.set(username, { data, ts: Date.now() });
 
   const sb = getSupabase();
-  if (!sb) return;
-  await sb
+  if (!sb) {
+    console.warn("[cache] setCached: Supabase not configured, skipping persist for", username);
+    return;
+  }
+  const { error } = await sb
     .from("diagnose_cache")
     .upsert({ username, data, analyzed_at: new Date().toISOString() });
+  if (error) {
+    console.error(
+      `[cache] setCached failed for ${username}: ${error.code ?? "?"} ${error.message}`,
+    );
+  }
 }

@@ -6,7 +6,13 @@
 // ============================================================
 
 import { createHash } from "crypto";
-import type { XTweet, XUser, VerifiedType } from "./x-api";
+import type {
+  XTweet,
+  XUser,
+  XMedia,
+  XReferencedTweet,
+  VerifiedType,
+} from "./x-api";
 import type {
   ClassifiedTweet,
   DiagnosisData,
@@ -51,7 +57,10 @@ const HOSTILE_KEYWORDS = [
 // ============================================================
 // Profile: X API の user オブジェクトをそのまま UI 用に整形
 // ============================================================
-export function buildProfile(user: XUser): ProfileData {
+export function buildProfile(
+  user: XUser,
+  pinnedTweet?: XReferencedTweet | null,
+): ProfileData {
   const metrics = user.public_metrics ?? {
     followers_count: 0,
     following_count: 0,
@@ -60,6 +69,31 @@ export function buildProfile(user: XUser): ProfileData {
   };
 
   const vt: VerifiedType = user.verified_type ?? (user.verified ? "blue" : "none");
+
+  const bioEntities: ProfileData["bioEntities"] = {
+    urls: (user.entities?.description?.urls ?? []).map((u) => ({
+      url: u.url,
+      expandedUrl: u.expanded_url ?? u.url,
+      displayUrl: u.display_url ?? u.url,
+    })),
+    hashtags: (user.entities?.description?.hashtags ?? []).map((h) => h.tag),
+    mentions: (user.entities?.description?.mentions ?? []).map((m) => m.username),
+  };
+
+  let pinned: ProfileData["pinnedTweet"] | undefined;
+  if (pinnedTweet) {
+    const pm = pinnedTweet.public_metrics;
+    pinned = {
+      id: pinnedTweet.id,
+      text: pinnedTweet.note_tweet?.text ?? pinnedTweet.text,
+      createdAt: pinnedTweet.created_at,
+      likes: pm?.like_count ?? 0,
+      rt: pm?.retweet_count ?? 0,
+      reply: pm?.reply_count ?? 0,
+      quote: pm?.quote_count ?? 0,
+      isLongForm: Boolean(pinnedTweet.note_tweet),
+    };
+  }
 
   return {
     username: user.username,
@@ -75,6 +109,9 @@ export function buildProfile(user: XUser): ProfileData {
     following: metrics.following_count,
     totalTweets: metrics.tweet_count,
     listed: metrics.listed_count,
+    isProtected: Boolean(user.protected),
+    bioEntities,
+    pinnedTweet: pinned,
   };
 }
 
@@ -209,11 +246,86 @@ function attachHashes(classified: ClassifiedTweet[]): ClassifiedTweet[] {
 // ============================================================
 // Main entry point
 // ============================================================
+export interface BuildDiagnosisIncludes {
+  mediaByKey?: Map<string, XMedia>;
+  referencedById?: Map<string, XReferencedTweet>;
+  usersById?: Map<string, XUser>;
+  pinnedTweet?: XReferencedTweet | null;
+}
+
+/** Enrich classified tweets with original tweet metadata + includes data. */
+function enrichClassified(
+  classified: ClassifiedTweet[],
+  tweets: XTweet[],
+  includes: BuildDiagnosisIncludes,
+): ClassifiedTweet[] {
+  const { mediaByKey, referencedById, usersById } = includes;
+  const tweetById = new Map(tweets.map((t) => [t.id, t]));
+
+  return classified.map((c) => {
+    const original = tweetById.get(c.tweet_id);
+    if (!original) return c;
+
+    const enriched: ClassifiedTweet = { ...c };
+    enriched.metrics = {
+      likes: original.public_metrics.like_count,
+      rt: original.public_metrics.retweet_count,
+      reply: original.public_metrics.reply_count,
+      impressions: original.public_metrics.impression_count,
+      bookmarks: original.public_metrics.bookmark_count,
+    };
+    enriched.possiblySensitive = original.possibly_sensitive;
+    enriched.isLongForm = Boolean(original.note_tweet);
+    enriched.source = original.source;
+
+    const refRel = original.referenced_tweets?.find(
+      (r) => r.type === "replied_to" || r.type === "quoted",
+    );
+    if (refRel && referencedById) {
+      const ref = referencedById.get(refRel.id);
+      if (ref) {
+        const author = ref.author_id && usersById ? usersById.get(ref.author_id) : undefined;
+        enriched.referencedTweet = {
+          type: refRel.type as "replied_to" | "quoted",
+          text: ref.note_tweet?.text ?? ref.text,
+          authorUsername: author?.username,
+          authorName: author?.name,
+          likes: ref.public_metrics?.like_count,
+          rt: ref.public_metrics?.retweet_count,
+        };
+      }
+    }
+
+    const mediaKeys = original.attachments?.media_keys ?? [];
+    if (mediaByKey && mediaKeys.length > 0) {
+      const mapped = mediaKeys
+        .map((k) => mediaByKey.get(k))
+        .filter((m): m is XMedia => Boolean(m))
+        .map((m) => ({
+          type: m.type,
+          previewImageUrl: m.preview_image_url ?? m.url,
+          altText: m.alt_text,
+        }));
+      if (mapped.length > 0) enriched.media = mapped;
+    }
+
+    if (original.context_annotations && original.context_annotations.length > 0) {
+      enriched.contextTopics = original.context_annotations
+        .slice(0, 5)
+        .map((ca) => ({ domain: ca.domain.name, entity: ca.entity.name }));
+    }
+
+    return enriched;
+  });
+}
+
 export function buildDiagnosis(
   user: XUser,
   tweets: XTweet[],
-  classified: ClassifiedTweet[],
+  rawClassified: ClassifiedTweet[],
+  includes: BuildDiagnosisIncludes = {},
 ): DiagnosisData {
+  const classified = enrichClassified(rawClassified, tweets, includes);
   // Score: sum of severity weights, normalized to 0-100
   const rawScore = classified.reduce((acc, c) => acc + (SEVERITY_WEIGHT[c.severity] ?? 0), 0);
   const score = Math.min(
@@ -294,7 +406,7 @@ export function buildDiagnosis(
     mentionedUsers,
     hostileKeywords,
     monthlyProblemPosts: monthly,
-    profile: buildProfile(user),
+    profile: buildProfile(user, includes.pinnedTweet),
     analysis: buildAnalysis(tweets),
     evidence: attachHashes(classified.filter((c) => c.severity !== "none")),
     emotionProfile: aggregateEmotion(classified),

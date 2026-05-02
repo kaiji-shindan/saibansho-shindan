@@ -10,7 +10,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { CheckCircle, ExternalLink, User } from "lucide-react";
+import { CheckCircle, ExternalLink, Lock, Pin, User } from "lucide-react";
 import type { ProfileData } from "@/lib/diagnose-types";
 
 // ============================================================
@@ -96,7 +96,16 @@ function VerifiedBadge({ type }: { type: ProfileData["verifiedType"] }) {
 // ============================================================
 // Component
 // ============================================================
-export function AccountProfileCard({ profile }: { profile: ProfileData }) {
+export function AccountProfileCard({
+  profile,
+  showPinned = false,
+}: {
+  profile: ProfileData;
+  /** When true, render the pinned tweet card (premium only). */
+  showPinned?: boolean;
+}) {
+  const bioUrls = profile.bioEntities?.urls ?? [];
+  const bioHashtags = profile.bioEntities?.hashtags ?? [];
   return (
     <>
       {/* Profile card */}
@@ -113,10 +122,13 @@ export function AccountProfileCard({ profile }: { profile: ProfileData }) {
               {profile.isVerified && (
                 <CheckCircle className="h-4 w-4 shrink-0 text-blue-500" />
               )}
+              {profile.isProtected && (
+                <Lock className="h-4 w-4 shrink-0 text-amber-500" aria-label="鍵アカ" />
+              )}
             </div>
             <p className="text-sm text-text-muted">@{profile.username}</p>
             {profile.bio && (
-              <p className="mt-2 text-xs leading-relaxed text-text-sub line-clamp-3">
+              <p className="mt-2 text-xs leading-relaxed text-text-sub whitespace-pre-wrap">
                 {profile.bio}
               </p>
             )}
@@ -131,12 +143,43 @@ export function AccountProfileCard({ profile }: { profile: ProfileData }) {
                 {profile.url.replace(/^https?:\/\//, "")}
               </a>
             )}
+            {(bioUrls.length > 0 || bioHashtags.length > 0) && (
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                {bioUrls.slice(0, 3).map((u) => (
+                  <a
+                    key={u.url}
+                    href={u.expandedUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex max-w-[200px] items-center gap-1 truncate rounded-full border border-blue-100 bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700 hover:underline"
+                    title={u.expandedUrl}
+                  >
+                    <ExternalLink className="h-2.5 w-2.5 shrink-0" />
+                    {u.displayUrl}
+                  </a>
+                ))}
+                {bioHashtags.slice(0, 4).map((h) => (
+                  <span
+                    key={h}
+                    className="rounded-full border border-violet-100 bg-violet-50 px-2 py-0.5 text-[10px] font-bold text-violet-700"
+                  >
+                    #{h}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
         {/* Badges */}
         <div className="mt-4 flex flex-wrap gap-1.5">
           <VerifiedBadge type={profile.verifiedType} />
+          {profile.isProtected && (
+            <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[10px] font-bold text-amber-700">
+              <Lock className="h-2.5 w-2.5" />
+              鍵アカ
+            </span>
+          )}
           <span className="rounded-full border border-border bg-surface px-2.5 py-0.5 text-[10px] font-semibold text-text-sub">
             作成日 {profile.accountCreated}
           </span>
@@ -150,6 +193,30 @@ export function AccountProfileCard({ profile }: { profile: ProfileData }) {
         <StatCell value={profile.totalTweets} label="総投稿数" color="text-indigo-600" />
         <StatCell value={profile.listed} label="リスト" color="text-cyan-600" />
       </div>
+
+      {showPinned && profile.pinnedTweet && (
+        <div className="mt-3 rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50/70 to-white p-4 sm:p-5">
+          <p className="flex items-center gap-1.5 text-[11px] font-extrabold text-amber-700">
+            <Pin className="h-3 w-3" />
+            プロフィールに固定中の投稿
+          </p>
+          <p className="mt-2 whitespace-pre-wrap text-[13px] leading-relaxed text-text-main">
+            {profile.pinnedTweet.text}
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-text-muted">
+            <span>{new Date(profile.pinnedTweet.createdAt).toLocaleString("ja-JP")}</span>
+            <span>♥ {profile.pinnedTweet.likes}</span>
+            <span>↻ {profile.pinnedTweet.rt}</span>
+            <span>↩ {profile.pinnedTweet.reply}</span>
+            {profile.pinnedTweet.quote > 0 && <span>❝ {profile.pinnedTweet.quote}</span>}
+            {profile.pinnedTweet.isLongForm && (
+              <span className="rounded-md bg-indigo-50 px-1.5 py-0.5 text-[9px] font-extrabold text-indigo-700">
+                LONG
+              </span>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 }

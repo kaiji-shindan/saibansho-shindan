@@ -38,13 +38,36 @@ export interface ClassifiedTweet {
   applicable_law: string; // e.g. "刑法230条"
   tags: string[];
   reasoning: string;
-  metrics: { likes: number; rt: number; reply: number };
+  metrics: { likes: number; rt: number; reply: number; impressions?: number; bookmarks?: number };
   /** Dominant emotion of this tweet (premium) */
   emotion?: DominantEmotion;
   /** SHA-256 of `${tweet_id}|${created_at}|${text}` for tamper-evidence */
   hash?: string;
   /** ISO timestamp when this evidence was captured by the system */
   capturedAt?: string;
+  /** True when X itself flagged the tweet as possibly_sensitive */
+  possiblySensitive?: boolean;
+  /** True when the body came from a >280 char note_tweet block */
+  isLongForm?: boolean;
+  /** Posting client e.g. "Twitter for iPhone" */
+  source?: string;
+  /** When the tweet is a reply or quote, the parent tweet snippet — for context */
+  referencedTweet?: {
+    type: "replied_to" | "quoted";
+    text: string;
+    authorUsername?: string;
+    authorName?: string;
+    likes?: number;
+    rt?: number;
+  };
+  /** Media attachments (images/videos) on this tweet */
+  media?: {
+    type: "photo" | "video" | "animated_gif";
+    previewImageUrl?: string;
+    altText?: string;
+  }[];
+  /** X-side automatic topic tags */
+  contextTopics?: { domain: string; entity: string }[];
 }
 
 // ============================================================
@@ -68,6 +91,25 @@ export interface ProfileData {
   totalTweets: number;
   /** public_metrics.listed_count */
   listed: number;
+  /** True when the account is locked (鍵アカ) */
+  isProtected: boolean;
+  /** Bio に含まれるリンク・ハッシュタグ・メンション */
+  bioEntities: {
+    urls: { url: string; expandedUrl: string; displayUrl: string }[];
+    hashtags: string[];
+    mentions: string[];
+  };
+  /** Pinned tweet snippet (from /tweets/{pinned_tweet_id}) */
+  pinnedTweet?: {
+    id: string;
+    text: string;
+    createdAt: string;
+    likes: number;
+    rt: number;
+    reply: number;
+    quote: number;
+    isLongForm: boolean;
+  };
 }
 
 // ============================================================
