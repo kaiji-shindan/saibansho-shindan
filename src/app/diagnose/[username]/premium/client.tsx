@@ -314,7 +314,7 @@ export function PremiumClient({ username }: { username: string }) {
           <p className="mt-4 text-center text-[10px] leading-relaxed text-slate-500">
             ※ X API v2 で取得した直近最大 100 件（RT 除く）が分析対象です。
             {data.source === "x-api+claude" && data.analyzedAt && (
-              <> 取得時刻: {new Date(data.analyzedAt).toLocaleString("ja-JP")}（キャッシュ 24h）</>
+              <> 取得時刻: {new Date(data.analyzedAt).toLocaleString("ja-JP")}</>
             )}
             {data.source === "mock" && <> ※ これはサンプル表示です。実アカウントは分析していません。</>}
           </p>

@@ -30,16 +30,35 @@ declare global {
 
 const LIFF_SDK_SRC = "https://static.line-scdn.net/liff/edge/2/sdk.js";
 
-export function LiffClient({ username }: { username: string }) {
+/**
+ * Resolve the diagnose target username from the URL.
+ *
+ * LIFF wraps custom query params into `?liff.state=...` when redirecting
+ * from the LIFF endpoint, so we have to look in two places:
+ *   1) Plain `?username=...`
+ *   2) Encoded inside `?liff.state=username%3D...`
+ */
+function resolveUsernameFromUrl(initial: string): string {
+  if (initial) return initial;
+  if (typeof window === "undefined") return "";
+  const params = new URLSearchParams(window.location.search);
+  const direct = params.get("username");
+  if (direct) return direct;
+  const stateRaw = params.get("liff.state");
+  if (stateRaw) {
+    const stateStr = stateRaw.startsWith("?") ? stateRaw.substring(1) : stateRaw;
+    const stateParams = new URLSearchParams(stateStr);
+    return stateParams.get("username") ?? "";
+  }
+  return "";
+}
+
+export function LiffClient({ username: initialUsername }: { username: string }) {
+  const [username, setUsername] = useState<string>(initialUsername);
   const [status, setStatus] = useState<Status>("init");
   const [errorMessage, setErrorMessage] = useState<string>("");
 
   useEffect(() => {
-    if (!username) {
-      setStatus("missingArg");
-      return;
-    }
-
     let cancelled = false;
     const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
 
@@ -65,6 +84,15 @@ export function LiffClient({ username }: { username: string }) {
 
         const liff = window.liff!;
         await liff.init({ liffId });
+        if (cancelled) return;
+
+        // After liff.init the URL's liff.state is processed; re-read username.
+        const resolvedUsername = resolveUsernameFromUrl(initialUsername);
+        if (!resolvedUsername) {
+          setStatus("missingArg");
+          return;
+        }
+        setUsername(resolvedUsername);
 
         // 2) Ensure logged in (browser path; in LINE app it's already logged in)
         if (!liff.isLoggedIn()) {
@@ -84,7 +112,7 @@ export function LiffClient({ username }: { username: string }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             userId: profile.userId,
-            username,
+            username: resolvedUsername,
             displayName: profile.displayName ?? null,
           }),
         });
@@ -109,7 +137,8 @@ export function LiffClient({ username }: { username: string }) {
     return () => {
       cancelled = true;
     };
-  }, [username]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialUsername]);
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-[#f0fbf1] via-white to-[#ecfdf3] px-5 py-10">

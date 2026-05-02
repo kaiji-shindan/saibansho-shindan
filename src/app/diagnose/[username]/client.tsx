@@ -374,7 +374,7 @@ export function DiagnoseClient({ username }: { username: string }) {
           <p className="mt-4 text-center text-[10px] leading-relaxed text-slate-500">
             ※ X API v2 で取得した直近最大 100 件（RT 除く）が分析対象です。
             {result.source === "x-api+claude" && result.analyzedAt && (
-              <> 取得時刻: {new Date(result.analyzedAt).toLocaleString("ja-JP")} / キャッシュ 24h</>
+              <> 取得時刻: {new Date(result.analyzedAt).toLocaleString("ja-JP")}</>
             )}
           </p>
         </div>
@@ -388,31 +388,40 @@ export function DiagnoseClient({ username }: { username: string }) {
             </span>
           </div>
 
-          <div className="relative mt-5">
-            <div className="absolute left-[13px] top-3 bottom-3 w-px bg-border" />
-            <div className="space-y-5">
-              {result.topPosts.map((post, i) => {
-                const sc = severityConfig[post.severity];
-                return (
-                  <div key={i} className="relative flex gap-4">
-                    <div className="relative z-10 mt-1.5 shrink-0">
-                      <div className={`h-[26px] w-[26px] rounded-full border-2 border-white ${sc.dot} shadow-sm`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className={`rounded-md px-2 py-0.5 text-xs font-bold ${sc.color} ${sc.bg}`}>{sc.label}</span>
-                        <span className="rounded-md bg-surface px-2 py-0.5 text-xs font-medium text-text-muted">{post.category}</span>
-                        <span className="ml-auto flex items-center gap-1 text-xs text-text-muted">
-                          <Clock className="h-3.5 w-3.5" />{post.date}
-                        </span>
-                      </div>
-                      <p className="mt-2.5 rounded-xl bg-surface p-4 text-base leading-relaxed font-medium">{post.text}</p>
-                    </div>
-                  </div>
-                );
-              })}
+          {result.topPosts.length === 0 ? (
+            <div className="mt-5 rounded-2xl border border-emerald-100 bg-emerald-50/50 p-6 text-center">
+              <p className="text-base font-extrabold text-emerald-700">問題投稿は検出されませんでした</p>
+              <p className="mt-2 text-sm leading-relaxed text-emerald-600">
+                分析対象の投稿に法的リスクのある表現は見つかりませんでした。
+              </p>
             </div>
-          </div>
+          ) : (
+            <div className="relative mt-5">
+              <div className="absolute left-[13px] top-3 bottom-3 w-px bg-border" />
+              <div className="space-y-5">
+                {result.topPosts.map((post, i) => {
+                  const sc = severityConfig[post.severity];
+                  return (
+                    <div key={i} className="relative flex gap-4">
+                      <div className="relative z-10 mt-1.5 shrink-0">
+                        <div className={`h-[26px] w-[26px] rounded-full border-2 border-white ${sc.dot} shadow-sm`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className={`rounded-md px-2 py-0.5 text-xs font-bold ${sc.color} ${sc.bg}`}>{sc.label}</span>
+                          <span className="rounded-md bg-surface px-2 py-0.5 text-xs font-medium text-text-muted">{post.category}</span>
+                          <span className="ml-auto flex items-center gap-1 text-xs text-text-muted">
+                            <Clock className="h-3.5 w-3.5" />{post.date}
+                          </span>
+                        </div>
+                        <p className="mt-2.5 rounded-xl bg-surface p-4 text-base leading-relaxed font-medium">{post.text}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {result.problemPosts > result.topPosts.length && (
             <p className="mt-5 text-center text-sm text-text-muted">
