@@ -566,25 +566,22 @@ function CategoryBreakdown({
       <p className="mt-1 text-[11px] text-slate-500">
         企業公式・タレント・大型インフルエンサー等の構成を可視化。法律事務所以外（PR会社・タレント事務所・企業広報）への営業材料に使えます。
       </p>
-      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
         {list.map((b) => (
-          <div key={b.meta.key} className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
-            <div className="flex items-start justify-between gap-2">
-              <p className={`inline-block rounded-md px-1.5 py-0.5 text-[10px] font-extrabold ${b.meta.badgeBg} ${b.meta.badgeText}`}>
-                {b.meta.label}
-              </p>
-              <p className="text-lg font-extrabold tracking-tight text-slate-800">
-                {fmtNum(b.diagnoses)}
-                <span className="ml-1 text-[10px] font-bold text-slate-500">件</span>
-              </p>
-            </div>
-            <p className="mt-1.5 text-[11px] font-bold text-slate-600">
-              判定基準: <span className="font-medium text-slate-700">{b.meta.criterion}</span>
+          <div
+            key={b.meta.key}
+            className="rounded-xl border border-slate-100 bg-slate-50/60 p-3"
+            title={b.meta.useCase}
+          >
+            <p className={`inline-block rounded-md px-1.5 py-0.5 text-[10px] font-extrabold ${b.meta.badgeBg} ${b.meta.badgeText}`}>
+              {b.meta.label}
             </p>
-            <p className="mt-1 text-[10.5px] leading-relaxed text-slate-500">
-              {b.meta.useCase}
+            <p className="mt-1 text-[10px] leading-tight text-slate-500">{b.meta.criterion}</p>
+            <p className="mt-2 text-lg font-extrabold tracking-tight text-slate-800">
+              {fmtNum(b.diagnoses)}
+              <span className="ml-1 text-[10px] font-bold text-slate-500">件</span>
             </p>
-            <p className="mt-1.5 text-[10px] text-slate-500">
+            <p className="text-[10px] text-slate-500">
               {fmtNum(b.accounts)} アカウント
               {totalDiagnoses > 0 && (
                 <span className="ml-1">/ {Math.round((b.diagnoses / totalDiagnoses) * 100)}%</span>
