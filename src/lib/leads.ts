@@ -368,6 +368,7 @@ export interface LeadStats {
   totalDiagnose: number;
   totalLineClick: number;
   totalLineRegistered: number;
+  totalXOauth: number;
   uniqueUsernames: number;
   last24hDiagnose: number;
 }
@@ -381,6 +382,7 @@ export async function getLeadStats(): Promise<LeadStats> {
       totalDiagnose: diag.length,
       totalLineClick: memStore.filter((r) => r.kind === "line_click").length,
       totalLineRegistered: memStore.filter((r) => r.kind === "line_registered").length,
+      totalXOauth: memStore.filter((r) => r.kind === "x_oauth").length,
       uniqueUsernames: new Set(diag.map((r) => r.query_username).filter(Boolean)).size,
       last24hDiagnose: diag.filter((r) => new Date(r.created_at).getTime() > since).length,
     };
@@ -388,10 +390,11 @@ export async function getLeadStats(): Promise<LeadStats> {
 
   const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-  const [diagC, lineClickC, lineRegC, last24C, usernamesRes] = await Promise.all([
+  const [diagC, lineClickC, lineRegC, xOauthC, last24C, usernamesRes] = await Promise.all([
     sb.from("leads").select("id", { count: "exact", head: true }).eq("kind", "diagnose"),
     sb.from("leads").select("id", { count: "exact", head: true }).eq("kind", "line_click"),
     sb.from("leads").select("id", { count: "exact", head: true }).eq("kind", "line_registered"),
+    sb.from("leads").select("id", { count: "exact", head: true }).eq("kind", "x_oauth"),
     sb
       .from("leads")
       .select("id", { count: "exact", head: true })
@@ -415,9 +418,85 @@ export async function getLeadStats(): Promise<LeadStats> {
     totalDiagnose: diagC.count ?? 0,
     totalLineClick: lineClickC.count ?? 0,
     totalLineRegistered: lineRegC.count ?? 0,
+    totalXOauth: xOauthC.count ?? 0,
     uniqueUsernames: unique.size,
     last24hDiagnose: last24C.count ?? 0,
   };
+}
+
+// ------------------------------------------------------------
+// Supabase health check — used by /admin to surface config issues
+// ------------------------------------------------------------
+export interface SupabaseHealth {
+  configured: boolean;
+  reachable: boolean;
+  errorMessage: string | null;
+}
+
+export async function getSupabaseHealth(): Promise<SupabaseHealth> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) {
+    return {
+      configured: false,
+      reachable: false,
+      errorMessage: !url
+        ? "NEXT_PUBLIC_SUPABASE_URL is missing"
+        : "SUPABASE_SERVICE_ROLE_KEY is missing",
+    };
+  }
+
+  const sb = getSupabase();
+  if (!sb) {
+    return {
+      configured: false,
+      reachable: false,
+      errorMessage: "Supabase client failed to initialize",
+    };
+  }
+
+  try {
+    const { error } = await sb
+      .from("leads")
+      .select("id", { count: "exact", head: true })
+      .limit(1);
+    if (error) {
+      return { configured: true, reachable: false, errorMessage: error.message };
+    }
+    return { configured: true, reachable: true, errorMessage: null };
+  } catch (err) {
+    return {
+      configured: true,
+      reachable: false,
+      errorMessage: err instanceof Error ? err.message : "unknown error",
+    };
+  }
+}
+
+// ------------------------------------------------------------
+// LINE display-name lookup (batch) — joins admin tables w/ pending links
+// ------------------------------------------------------------
+export interface LineLinkRow {
+  line_user_id: string;
+  pending_username: string;
+  display_name: string | null;
+  created_at: string;
+}
+
+export async function getLinePendingLinks(limit = 100): Promise<LineLinkRow[]> {
+  const sb = getSupabase();
+  if (!sb) return [];
+  const { data, error } = await sb
+    .from("line_pending_links")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) {
+    console.warn("[leads] line_pending_links list failed:", error.message);
+    return [];
+  }
+  return (data ?? []) as LineLinkRow[];
 }
 
 // ------------------------------------------------------------
