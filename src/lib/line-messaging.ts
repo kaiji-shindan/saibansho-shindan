@@ -25,6 +25,8 @@ export function buildFollowMessages(username: string, siteUrl: string) {
         `・問題投稿の全件リスト\n` +
         `・カテゴリ別の法令該当性\n` +
         `・開示請求書テンプレート（PDF出力可）\n\n` +
+        `🔐 ご本人確認のため、詳細レポートの閲覧時には X (Twitter) でのログインを求められます。\n` +
+        `@${username} 本人のみが閲覧可能です。\n\n` +
         `別のアカウントを診断する場合はこちら👉\n${homeUrl}\n\n` +
         `※ 本サービスは情報整理ツールです。法的助言・弁護士のご紹介は行っておりません。`,
     },
