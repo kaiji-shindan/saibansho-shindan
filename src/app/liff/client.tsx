@@ -30,26 +30,61 @@ declare global {
 
 const LIFF_SDK_SRC = "https://static.line-scdn.net/liff/edge/2/sdk.js";
 
+const LIFF_PENDING_USERNAME_KEY = "kaiji_liff_pending_username";
+
+function readCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const cookies = document.cookie.split("; ");
+  for (const c of cookies) {
+    const eq = c.indexOf("=");
+    if (eq > -1 && c.substring(0, eq) === name) {
+      return decodeURIComponent(c.substring(eq + 1));
+    }
+  }
+  return null;
+}
+
 /**
- * Resolve the diagnose target username from the URL.
+ * Resolve the diagnose target username from multiple channels.
  *
- * LIFF wraps custom query params into `?liff.state=...` when redirecting
- * from the LIFF endpoint, so we have to look in two places:
- *   1) Plain `?username=...`
- *   2) Encoded inside `?liff.state=username%3D...`
+ * LIFF strips/wraps custom query params during the in-LINE-app redirect,
+ * so we look in:
+ *   1) The Next.js searchParams (`initial`) — works in plain browsers
+ *   2) `?username=...` on the live URL after liff.init()
+ *   3) `?liff.state=username%3D...` inside liff.state
+ *   4) `kaiji_liff_pending_username` cookie (set by line-gate before opening LIFF)
+ *   5) localStorage with the same key
  */
 function resolveUsernameFromUrl(initial: string): string {
   if (initial) return initial;
   if (typeof window === "undefined") return "";
+
+  // 2) Plain ?username=
   const params = new URLSearchParams(window.location.search);
   const direct = params.get("username");
   if (direct) return direct;
+
+  // 3) liff.state wrapped
   const stateRaw = params.get("liff.state");
   if (stateRaw) {
     const stateStr = stateRaw.startsWith("?") ? stateRaw.substring(1) : stateRaw;
     const stateParams = new URLSearchParams(stateStr);
-    return stateParams.get("username") ?? "";
+    const inState = stateParams.get("username");
+    if (inState) return inState;
   }
+
+  // 4) Cookie set by line-gate before opening LIFF
+  const cookieValue = readCookie(LIFF_PENDING_USERNAME_KEY);
+  if (cookieValue) return cookieValue;
+
+  // 5) localStorage (works in same-origin contexts)
+  try {
+    const stored = window.localStorage.getItem(LIFF_PENDING_USERNAME_KEY);
+    if (stored) return stored;
+  } catch {
+    // localStorage may be blocked
+  }
+
   return "";
 }
 

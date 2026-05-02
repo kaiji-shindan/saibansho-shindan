@@ -59,6 +59,20 @@ export function useLineOpened(): [boolean, () => void] {
   return [opened, markOpened];
 }
 
+/** Cookie used as a fallback channel for the username when LIFF strips
+ *  query params during the in-LINE-app redirect. */
+const LIFF_PENDING_USERNAME_COOKIE = "kaiji_liff_pending_username";
+
+function setLiffPendingUsernameCookie(username: string) {
+  if (typeof document === "undefined") return;
+  // 5 min TTL is plenty for the user to complete LIFF auth.
+  // SameSite=Lax so it survives the cross-site redirect from liff.line.me.
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  document.cookie =
+    `${LIFF_PENDING_USERNAME_COOKIE}=${encodeURIComponent(username)};` +
+    ` path=/; max-age=300; SameSite=Lax${secure}`;
+}
+
 /**
  * Resolve the URL we open when the user clicks "LINEで受け取る".
  *
@@ -83,6 +97,12 @@ export async function openLineAndMarkOpened(username?: string, markOpened?: () =
   // Optimistically set local flags so the unlock happens immediately.
   if (typeof window !== "undefined") {
     window.localStorage.setItem(LINE_VERIFIED_STORAGE_KEY, LINE_VERIFIED_VALUE);
+    // Stash the username in localStorage AND cookie so the /liff page can
+    // recover it when LIFF strips query params during in-app redirects.
+    if (username) {
+      window.localStorage.setItem(LIFF_PENDING_USERNAME_COOKIE, username);
+      setLiffPendingUsernameCookie(username);
+    }
   }
   markOpened?.();
   trackEvent("LINE Click", username ? { username } : undefined);
