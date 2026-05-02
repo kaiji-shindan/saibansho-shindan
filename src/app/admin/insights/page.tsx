@@ -407,7 +407,7 @@ function RankRow({
               <span className="truncate font-extrabold">{display}</span>
               <span
                 className={`rounded-md px-1.5 py-0.5 text-[9px] font-extrabold ${cat.badgeBg} ${cat.badgeText}`}
-                title={cat.hint}
+                title={`${cat.label}: ${cat.criterion}`}
               >
                 {cat.label}
               </span>
@@ -461,18 +461,63 @@ type AccountCategoryKey = "government" | "business" | "macro" | "mid" | "micro" 
 interface AccountCategory {
   key: AccountCategoryKey;
   label: string;
-  hint: string;
+  /** 自動判定の基準 (UI に表示) */
+  criterion: string;
+  /** どんな営業先に使えるか (UI のヘルプ) */
+  useCase: string;
   badgeBg: string;
   badgeText: string;
 }
 
 const CATEGORY_DEFS: Record<AccountCategoryKey, AccountCategory> = {
-  government: { key: "government", label: "政府/公共", hint: "verified_type=government", badgeBg: "bg-slate-100", badgeText: "text-slate-700" },
-  business:   { key: "business",   label: "企業公式", hint: "verified_type=business",   badgeBg: "bg-amber-100", badgeText: "text-amber-700" },
-  macro:      { key: "macro",      label: "マクロ", hint: "フォロワー10万以上",         badgeBg: "bg-rose-100",  badgeText: "text-rose-700" },
-  mid:        { key: "mid",        label: "ミドル", hint: "フォロワー1万〜10万",         badgeBg: "bg-violet-100", badgeText: "text-violet-700" },
-  micro:      { key: "micro",      label: "マイクロ", hint: "フォロワー1千〜1万",         badgeBg: "bg-blue-100",  badgeText: "text-blue-700" },
-  individual: { key: "individual", label: "個人", hint: "フォロワー1千未満 / 不明",       badgeBg: "bg-slate-100", badgeText: "text-slate-600" },
+  government: {
+    key: "government",
+    label: "政府/公共",
+    criterion: "X 政府認証バッジあり",
+    useCase: "省庁・自治体・公的機関アカウント",
+    badgeBg: "bg-slate-100",
+    badgeText: "text-slate-700",
+  },
+  business: {
+    key: "business",
+    label: "企業公式",
+    criterion: "X ビジネス認証バッジあり",
+    useCase: "企業広報・PR会社向けの誹謗中傷モニタリング営業先",
+    badgeBg: "bg-amber-100",
+    badgeText: "text-amber-700",
+  },
+  macro: {
+    key: "macro",
+    label: "マクロ (大型)",
+    criterion: "フォロワー 10万人以上",
+    useCase: "芸能人・大型インフルエンサー。タレント事務所/マネジメントへの営業先",
+    badgeBg: "bg-rose-100",
+    badgeText: "text-rose-700",
+  },
+  mid: {
+    key: "mid",
+    label: "ミドル",
+    criterion: "フォロワー 1万〜10万人",
+    useCase: "中堅インフルエンサー・タレント。賠償額が見込みやすい層",
+    badgeBg: "bg-violet-100",
+    badgeText: "text-violet-700",
+  },
+  micro: {
+    key: "micro",
+    label: "マイクロ",
+    criterion: "フォロワー 1千〜1万人",
+    useCase: "小規模インフルエンサー・地域有名人",
+    badgeBg: "bg-blue-100",
+    badgeText: "text-blue-700",
+  },
+  individual: {
+    key: "individual",
+    label: "個人",
+    criterion: "フォロワー 1千人未満 または不明",
+    useCase: "一般ユーザー。被害者本人として相談に来るケースが多い層",
+    badgeBg: "bg-slate-100",
+    badgeText: "text-slate-600",
+  },
 };
 
 function classifyAccount(profile: XProfileSnapshot | undefined): AccountCategory {
@@ -521,17 +566,25 @@ function CategoryBreakdown({
       <p className="mt-1 text-[11px] text-slate-500">
         企業公式・タレント・大型インフルエンサー等の構成を可視化。法律事務所以外（PR会社・タレント事務所・企業広報）への営業材料に使えます。
       </p>
-      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {list.map((b) => (
           <div key={b.meta.key} className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
-            <p className={`inline-block rounded-md px-1.5 py-0.5 text-[10px] font-extrabold ${b.meta.badgeBg} ${b.meta.badgeText}`}>
-              {b.meta.label}
+            <div className="flex items-start justify-between gap-2">
+              <p className={`inline-block rounded-md px-1.5 py-0.5 text-[10px] font-extrabold ${b.meta.badgeBg} ${b.meta.badgeText}`}>
+                {b.meta.label}
+              </p>
+              <p className="text-lg font-extrabold tracking-tight text-slate-800">
+                {fmtNum(b.diagnoses)}
+                <span className="ml-1 text-[10px] font-bold text-slate-500">件</span>
+              </p>
+            </div>
+            <p className="mt-1.5 text-[11px] font-bold text-slate-600">
+              判定基準: <span className="font-medium text-slate-700">{b.meta.criterion}</span>
             </p>
-            <p className="mt-2 text-lg font-extrabold tracking-tight text-slate-800">
-              {fmtNum(b.diagnoses)}
-              <span className="ml-1 text-[10px] font-bold text-slate-500">件</span>
+            <p className="mt-1 text-[10.5px] leading-relaxed text-slate-500">
+              {b.meta.useCase}
             </p>
-            <p className="text-[10px] text-slate-500">
+            <p className="mt-1.5 text-[10px] text-slate-500">
               {fmtNum(b.accounts)} アカウント
               {totalDiagnoses > 0 && (
                 <span className="ml-1">/ {Math.round((b.diagnoses / totalDiagnoses) * 100)}%</span>
@@ -540,6 +593,27 @@ function CategoryBreakdown({
           </div>
         ))}
       </div>
+
+      {/* All-categories legend — 該当が無いカテゴリも含めて凡例として表示 */}
+      <details className="mt-3 rounded-xl border border-slate-100 bg-white p-3 text-[11px]">
+        <summary className="cursor-pointer font-bold text-slate-600">
+          全カテゴリの定義を見る
+        </summary>
+        <ul className="mt-2 space-y-1.5">
+          {(["government", "business", "macro", "mid", "micro", "individual"] as AccountCategoryKey[]).map((k) => {
+            const c = CATEGORY_DEFS[k];
+            return (
+              <li key={k} className="flex flex-wrap items-baseline gap-2">
+                <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-extrabold ${c.badgeBg} ${c.badgeText}`}>
+                  {c.label}
+                </span>
+                <span className="font-mono text-[10px] text-slate-500">{c.criterion}</span>
+                <span className="text-slate-600">— {c.useCase}</span>
+              </li>
+            );
+          })}
+        </ul>
+      </details>
     </section>
   );
 }
