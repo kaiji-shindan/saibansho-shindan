@@ -19,6 +19,8 @@ export function buildFollowMessages(username: string, siteUrl: string) {
     {
       type: "text",
       text:
+        `ご登録ありがとうございます！\n` +
+        `開示請求診断 公式アカウントです🧑‍⚖️\n\n` +
         `@${username} の診断結果が完成しました🎉\n\n` +
         `📊 詳細レポートはこちら\n${premiumUrl}\n\n` +
         `▼ 解放されるコンテンツ\n` +
@@ -27,8 +29,7 @@ export function buildFollowMessages(username: string, siteUrl: string) {
         `・開示請求書テンプレート（PDF出力可）\n\n` +
         `🔐 ご本人確認のため、詳細レポートの閲覧時には X (Twitter) でのログインを求められます。\n` +
         `@${username} 本人のみが閲覧可能です。\n\n` +
-        `別のアカウントを診断する場合はこちら👉\n${homeUrl}\n\n` +
-        `※ 本サービスは情報整理ツールです。法的助言・弁護士のご紹介は行っておりません。`,
+        `別のアカウントを診断する場合はこちら👉\n${homeUrl}`,
     },
   ];
 }
@@ -40,11 +41,10 @@ export function buildGenericGreetingMessages(siteUrl: string) {
     {
       type: "text",
       text:
-        `ご登録ありがとうございます。\n` +
-        `開示請求診断 公式アカウントです🙏\n\n` +
+        `ご登録ありがとうございます！\n` +
+        `開示請求診断 公式アカウントです🧑‍⚖️\n\n` +
         `📊 まずは無料診断をお試しください\n${cleanUrl}\n\n` +
-        `Xのアカウント名を入力するだけで、誹謗中傷の法的リスクを整理します。\n\n` +
-        `※ 本サービスは情報整理ツールです。法的助言・弁護士のご紹介は行っておりません。`,
+        `気になるXアカウントを入力するだけで、開示請求レベルを診断します！`,
     },
   ];
 }
