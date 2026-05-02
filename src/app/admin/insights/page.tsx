@@ -8,7 +8,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { FileDown, TrendingUp } from "lucide-react";
+import { FileDown, TrendingUp, AlertTriangle, Users } from "lucide-react";
 import {
   getDiagnoseRanking,
   getInsightsTrend,
@@ -29,6 +29,36 @@ const PERIOD_LABELS: Record<InsightsPeriod, string> = {
 };
 
 const VALID_PERIODS: InsightsPeriod[] = ["24h", "7d", "30d", "all"];
+
+// ============================================================
+// 集団被害（同一加害者に対する複数の被害者）の判定
+// 閾値: ユニーク Session ≥ 5 = high, 3〜4 = medium
+// ============================================================
+type ClusterTier = "high" | "medium" | "none";
+
+function clusterTier(uniqueSessions: number): ClusterTier {
+  if (uniqueSessions >= 5) return "high";
+  if (uniqueSessions >= 3) return "medium";
+  return "none";
+}
+
+const CLUSTER_STYLE: Record<
+  Exclude<ClusterTier, "none">,
+  { rowBg: string; badgeBg: string; badgeText: string; label: string }
+> = {
+  high: {
+    rowBg: "bg-rose-50/60",
+    badgeBg: "bg-rose-100",
+    badgeText: "text-rose-700",
+    label: "集団被害候補",
+  },
+  medium: {
+    rowBg: "bg-amber-50/40",
+    badgeBg: "bg-amber-100",
+    badgeText: "text-amber-700",
+    label: "複数被害",
+  },
+};
 
 function fmtJst(iso: string): string {
   const d = new Date(iso);
@@ -134,6 +164,10 @@ export default async function InsightsPage({
   const totalLineClick = ranking.reduce((acc, r) => acc + r.lineClickCount, 0);
   const uniqueAccounts = ranking.length;
 
+  const clusterRows = ranking.filter((r) => clusterTier(r.uniqueSessions) !== "none");
+  const highClusterCount = ranking.filter((r) => clusterTier(r.uniqueSessions) === "high").length;
+  const mediumClusterCount = ranking.filter((r) => clusterTier(r.uniqueSessions) === "medium").length;
+
   return (
     <div className="space-y-6">
       <div className="flex items-end justify-between gap-3">
@@ -171,11 +205,82 @@ export default async function InsightsPage({
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <SummaryCard label="診断回数 (合計)" value={fmtNum(totalDiagnose)} accent="text-violet-600" />
-        <SummaryCard label="ユニーク対象アカウント数" value={fmtNum(uniqueAccounts)} accent="text-indigo-600" />
+        <SummaryCard label="ユニーク対象アカウント" value={fmtNum(uniqueAccounts)} accent="text-indigo-600" />
         <SummaryCard label="LINE 友達追加クリック" value={fmtNum(totalLineClick)} accent="text-emerald-600" />
+        <SummaryCard
+          label="集団被害候補（≥3名）"
+          value={`${fmtNum(highClusterCount + mediumClusterCount)}`}
+          accent="text-rose-600"
+          hint={
+            highClusterCount > 0
+              ? `うち高(≥5名): ${highClusterCount}`
+              : mediumClusterCount > 0
+              ? `中(3-4名)のみ`
+              : undefined
+          }
+        />
       </div>
+
+      {/* Account category breakdown — 業界タグ別内訳 (⑥) */}
+      <CategoryBreakdown
+        ranking={ranking}
+        profiles={profiles}
+      />
+
+      {/* 集団被害候補 — 同一加害者に対する複数被害者シグナル (③) */}
+      {clusterRows.length > 0 && (
+        <section className="rounded-2xl border border-rose-200 bg-gradient-to-br from-rose-50 via-white to-amber-50/30 p-5">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-rose-600" />
+            <h2 className="text-sm font-extrabold text-rose-900">
+              集団被害候補 — 同一アカウントに対する複数被害者シグナル
+            </h2>
+          </div>
+          <p className="mt-1 text-[11px] text-rose-800/70">
+            ユニーク Session 数（実質的な異なる診断者数）が 3 以上のアカウントを抜粋。集団訴訟・連名での弁護士相談の余地があります。
+          </p>
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {clusterRows.slice(0, 9).map((row) => {
+              const tier = clusterTier(row.uniqueSessions);
+              if (tier === "none") return null;
+              const style = CLUSTER_STYLE[tier];
+              const profile = profiles.get(row.username);
+              return (
+                <Link
+                  key={row.username}
+                  href={`/admin/leads?username=${encodeURIComponent(row.username)}`}
+                  className={`flex items-center gap-3 rounded-xl border border-white/80 bg-white/90 p-3 shadow-sm transition hover:bg-white`}
+                >
+                  <Image
+                    src={profile?.profileImageUrl ?? `https://unavatar.io/x/${row.username}`}
+                    alt={`@${row.username}`}
+                    width={36}
+                    height={36}
+                    className="h-9 w-9 shrink-0 rounded-full object-cover"
+                    unoptimized
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="flex items-center gap-1.5">
+                      <span className="truncate font-extrabold">
+                        {profile?.displayName?.trim() || `@${row.username}`}
+                      </span>
+                      <span className={`rounded-md px-1.5 py-0.5 text-[9px] font-extrabold ${style.badgeBg} ${style.badgeText}`}>
+                        {style.label}
+                      </span>
+                    </p>
+                    <p className="truncate text-[11px] text-slate-500">
+                      <Users className="mr-0.5 inline h-2.5 w-2.5" />
+                      {row.uniqueSessions} 名から診断 / 計 {row.diagnoseCount} 件
+                    </p>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Trend chart */}
       <section className="rounded-2xl border border-slate-200 bg-white p-5">
@@ -229,7 +334,13 @@ export default async function InsightsPage({
                   </tr>
                 ) : (
                   ranking.map((row, i) => (
-                    <RankRow key={row.username} idx={i + 1} row={row} profile={profiles.get(row.username)} />
+                    <RankRow
+                      key={row.username}
+                      idx={i + 1}
+                      row={row}
+                      profile={profiles.get(row.username)}
+                      tier={clusterTier(row.uniqueSessions)}
+                    />
                   ))
                 )}
               </tbody>
@@ -241,11 +352,22 @@ export default async function InsightsPage({
   );
 }
 
-function SummaryCard({ label, value, accent }: { label: string; value: string; accent: string }) {
+function SummaryCard({
+  label,
+  value,
+  accent,
+  hint,
+}: {
+  label: string;
+  value: string;
+  accent: string;
+  hint?: string;
+}) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4">
       <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{label}</p>
       <p className={`mt-1 text-2xl font-extrabold tracking-tight ${accent}`}>{value}</p>
+      {hint && <p className="mt-0.5 text-[10px] text-slate-500">{hint}</p>}
     </div>
   );
 }
@@ -254,17 +376,21 @@ function RankRow({
   idx,
   row,
   profile,
+  tier,
 }: {
   idx: number;
   row: DiagnoseRankRow;
   profile: XProfileSnapshot | undefined;
+  tier: ClusterTier;
 }) {
   const handle = row.username;
   const display = profile?.displayName?.trim() || `@${handle}`;
   const avatar = profile?.profileImageUrl ?? `https://unavatar.io/x/${handle}`;
+  const cluster = tier !== "none" ? CLUSTER_STYLE[tier] : null;
+  const cat = classifyAccount(profile);
 
   return (
-    <tr className="border-t border-slate-100">
+    <tr className={`border-t border-slate-100 ${cluster?.rowBg ?? ""}`}>
       <td className="px-4 py-3 font-mono text-slate-400">{idx}</td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-2.5">
@@ -277,7 +403,22 @@ function RankRow({
             unoptimized
           />
           <div className="min-w-0">
-            <p className="truncate font-extrabold">{display}</p>
+            <p className="flex items-center gap-1.5">
+              <span className="truncate font-extrabold">{display}</span>
+              <span
+                className={`rounded-md px-1.5 py-0.5 text-[9px] font-extrabold ${cat.badgeBg} ${cat.badgeText}`}
+                title={cat.hint}
+              >
+                {cat.label}
+              </span>
+              {cluster && (
+                <span
+                  className={`rounded-md px-1.5 py-0.5 text-[9px] font-extrabold ${cluster.badgeBg} ${cluster.badgeText}`}
+                >
+                  {cluster.label}
+                </span>
+              )}
+            </p>
             <p className="truncate font-mono text-[11px] text-slate-500">@{handle}</p>
           </div>
         </div>
@@ -285,7 +426,17 @@ function RankRow({
       <td className="whitespace-nowrap px-4 py-3 text-sm font-extrabold text-violet-700">
         {fmtNum(row.diagnoseCount)}
       </td>
-      <td className="whitespace-nowrap px-4 py-3 text-slate-600">{fmtNum(row.uniqueSessions)}</td>
+      <td
+        className={`whitespace-nowrap px-4 py-3 ${
+          tier === "high"
+            ? "font-extrabold text-rose-600"
+            : tier === "medium"
+            ? "font-bold text-amber-700"
+            : "text-slate-600"
+        }`}
+      >
+        {fmtNum(row.uniqueSessions)}
+      </td>
       <td className="whitespace-nowrap px-4 py-3 text-emerald-600">{fmtNum(row.lineClickCount)}</td>
       <td className="whitespace-nowrap px-4 py-3 text-slate-600">{fmtNum(profile?.followers ?? null)}</td>
       <td className="whitespace-nowrap px-4 py-3 text-slate-500">{fmtJst(row.firstAt)}</td>
@@ -299,5 +450,96 @@ function RankRow({
         </Link>
       </td>
     </tr>
+  );
+}
+
+// ============================================================
+// 業界タグ（属性分類）— ⑥
+// ============================================================
+type AccountCategoryKey = "government" | "business" | "macro" | "mid" | "micro" | "individual";
+
+interface AccountCategory {
+  key: AccountCategoryKey;
+  label: string;
+  hint: string;
+  badgeBg: string;
+  badgeText: string;
+}
+
+const CATEGORY_DEFS: Record<AccountCategoryKey, AccountCategory> = {
+  government: { key: "government", label: "政府/公共", hint: "verified_type=government", badgeBg: "bg-slate-100", badgeText: "text-slate-700" },
+  business:   { key: "business",   label: "企業公式", hint: "verified_type=business",   badgeBg: "bg-amber-100", badgeText: "text-amber-700" },
+  macro:      { key: "macro",      label: "マクロ", hint: "フォロワー10万以上",         badgeBg: "bg-rose-100",  badgeText: "text-rose-700" },
+  mid:        { key: "mid",        label: "ミドル", hint: "フォロワー1万〜10万",         badgeBg: "bg-violet-100", badgeText: "text-violet-700" },
+  micro:      { key: "micro",      label: "マイクロ", hint: "フォロワー1千〜1万",         badgeBg: "bg-blue-100",  badgeText: "text-blue-700" },
+  individual: { key: "individual", label: "個人", hint: "フォロワー1千未満 / 不明",       badgeBg: "bg-slate-100", badgeText: "text-slate-600" },
+};
+
+function classifyAccount(profile: XProfileSnapshot | undefined): AccountCategory {
+  if (profile?.verifiedType === "government") return CATEGORY_DEFS.government;
+  if (profile?.verifiedType === "business")   return CATEGORY_DEFS.business;
+  const f = profile?.followers ?? 0;
+  if (f >= 100_000) return CATEGORY_DEFS.macro;
+  if (f >= 10_000)  return CATEGORY_DEFS.mid;
+  if (f >= 1_000)   return CATEGORY_DEFS.micro;
+  return CATEGORY_DEFS.individual;
+}
+
+function CategoryBreakdown({
+  ranking,
+  profiles,
+}: {
+  ranking: DiagnoseRankRow[];
+  profiles: Map<string, XProfileSnapshot>;
+}) {
+  // Aggregate diagnose counts per category
+  const buckets = new Map<AccountCategoryKey, { meta: AccountCategory; accounts: number; diagnoses: number }>();
+  for (const r of ranking) {
+    const cat = classifyAccount(profiles.get(r.username));
+    const entry = buckets.get(cat.key) ?? { meta: cat, accounts: 0, diagnoses: 0 };
+    entry.accounts += 1;
+    entry.diagnoses += r.diagnoseCount;
+    buckets.set(cat.key, entry);
+  }
+  const order: AccountCategoryKey[] = ["government", "business", "macro", "mid", "micro", "individual"];
+  const list = order
+    .map((k) => buckets.get(k))
+    .filter((x): x is { meta: AccountCategory; accounts: number; diagnoses: number } => Boolean(x));
+  const totalDiagnoses = list.reduce((acc, x) => acc + x.diagnoses, 0);
+
+  if (list.length === 0) return null;
+
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white p-5">
+      <div className="flex items-center gap-2">
+        <Users className="h-4 w-4 text-violet-500" />
+        <h2 className="text-sm font-extrabold">業界タグ別内訳</h2>
+        <span className="ml-auto text-[10px] text-slate-500">
+          フォロワー数と認証タイプで自動分類（※ 簡易判定）
+        </span>
+      </div>
+      <p className="mt-1 text-[11px] text-slate-500">
+        企業公式・タレント・大型インフルエンサー等の構成を可視化。法律事務所以外（PR会社・タレント事務所・企業広報）への営業材料に使えます。
+      </p>
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+        {list.map((b) => (
+          <div key={b.meta.key} className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
+            <p className={`inline-block rounded-md px-1.5 py-0.5 text-[10px] font-extrabold ${b.meta.badgeBg} ${b.meta.badgeText}`}>
+              {b.meta.label}
+            </p>
+            <p className="mt-2 text-lg font-extrabold tracking-tight text-slate-800">
+              {fmtNum(b.diagnoses)}
+              <span className="ml-1 text-[10px] font-bold text-slate-500">件</span>
+            </p>
+            <p className="text-[10px] text-slate-500">
+              {fmtNum(b.accounts)} アカウント
+              {totalDiagnoses > 0 && (
+                <span className="ml-1">/ {Math.round((b.diagnoses / totalDiagnoses) * 100)}%</span>
+              )}
+            </p>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }

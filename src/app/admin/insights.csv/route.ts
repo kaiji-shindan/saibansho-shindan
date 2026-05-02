@@ -32,10 +32,23 @@ export async function GET(req: NextRequest) {
   const ranking = await getDiagnoseRanking(period, 500);
   const profiles = await getProfileSnapshots(ranking.map((r) => r.username));
 
+  const tierOf = (n: number) => (n >= 5 ? "high" : n >= 3 ? "medium" : "");
+  const categoryOf = (followers: number | null, verifiedType: string | null) => {
+    if (verifiedType === "government") return "政府/公共";
+    if (verifiedType === "business") return "企業公式";
+    const f = followers ?? 0;
+    if (f >= 100_000) return "マクロ";
+    if (f >= 10_000) return "ミドル";
+    if (f >= 1_000) return "マイクロ";
+    return "個人";
+  };
+
   const header = [
     "rank",
     "username",
     "display_name",
+    "category",
+    "cluster_tier",
     "diagnose_count",
     "unique_sessions",
     "line_click_count",
@@ -54,6 +67,8 @@ export async function GET(req: NextRequest) {
         i + 1,
         r.username,
         p?.displayName ?? "",
+        categoryOf(p?.followers ?? null, p?.verifiedType ?? null),
+        tierOf(r.uniqueSessions),
         r.diagnoseCount,
         r.uniqueSessions,
         r.lineClickCount,
