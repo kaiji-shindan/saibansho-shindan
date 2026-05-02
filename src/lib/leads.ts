@@ -500,6 +500,64 @@ export async function getLinePendingLinks(limit = 100): Promise<LineLinkRow[]> {
 }
 
 // ------------------------------------------------------------
+// X profile snapshot lookup — pulls cached profile data from
+// diagnose_cache so admin pages can show avatar / followers without
+// hitting the X API again.
+// ------------------------------------------------------------
+export interface XProfileSnapshot {
+  username: string;
+  displayName: string | null;
+  profileImageUrl: string | null;
+  bio: string | null;
+  followers: number | null;
+  following: number | null;
+  totalTweets: number | null;
+  isVerified: boolean;
+  verifiedType: string | null;
+  accountCreatedIso: string | null;
+}
+
+export async function getProfileSnapshots(
+  usernames: string[],
+): Promise<Map<string, XProfileSnapshot>> {
+  const map = new Map<string, XProfileSnapshot>();
+  const unique = Array.from(new Set(usernames.filter((u) => u && u.length > 0)));
+  if (unique.length === 0) return map;
+
+  const sb = getSupabase();
+  if (!sb) return map;
+
+  const { data, error } = await sb
+    .from("diagnose_cache")
+    .select("username, data")
+    .in("username", unique);
+
+  if (error) {
+    console.warn("[leads] profile snapshot fetch failed:", error.message);
+    return map;
+  }
+
+  for (const row of (data ?? []) as { username: string; data: unknown }[]) {
+    const profile = (row.data as { profile?: Record<string, unknown> })?.profile;
+    if (!profile) continue;
+    map.set(row.username, {
+      username: String(profile.username ?? row.username),
+      displayName: (profile.displayName as string | undefined) ?? null,
+      profileImageUrl: (profile.profileImageUrl as string | undefined) ?? null,
+      bio: (profile.bio as string | undefined) ?? null,
+      followers: typeof profile.followers === "number" ? profile.followers : null,
+      following: typeof profile.following === "number" ? profile.following : null,
+      totalTweets: typeof profile.totalTweets === "number" ? profile.totalTweets : null,
+      isVerified: Boolean(profile.isVerified),
+      verifiedType: (profile.verifiedType as string | undefined) ?? null,
+      accountCreatedIso: (profile.accountCreatedIso as string | undefined) ?? null,
+    });
+  }
+
+  return map;
+}
+
+// ------------------------------------------------------------
 // Request helpers — extract client fingerprint from a NextRequest
 // ------------------------------------------------------------
 import type { NextRequest } from "next/server";

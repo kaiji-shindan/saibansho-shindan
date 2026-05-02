@@ -3,7 +3,16 @@
 // ============================================================
 
 import Link from "next/link";
-import { searchLeads, type LeadKind } from "@/lib/leads";
+import Image from "next/image";
+import { BadgeCheck } from "lucide-react";
+import { searchLeads, getProfileSnapshots, type LeadKind } from "@/lib/leads";
+
+function fmtCount(n: number | null): string {
+  if (n == null) return "-";
+  if (n >= 10000) return `${(n / 10000).toFixed(1)}万`;
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
+  return n.toLocaleString("ja-JP");
+}
 
 export const dynamic = "force-dynamic";
 
@@ -66,6 +75,12 @@ export default async function LeadsPage({
     limit: PAGE_SIZE,
     offset,
   });
+
+  // Fetch cached X profile data (avatar, follower count, etc.) for all
+  // unique usernames in this page so the table can show them inline.
+  const profiles = await getProfileSnapshots(
+    rows.map((r) => r.query_username ?? "").filter(Boolean),
+  );
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -149,71 +164,123 @@ export default async function LeadsPage({
       </form>
 
       {/* ===== Results table ===== */}
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
         <table className="w-full text-left text-xs">
           <thead className="bg-slate-50 text-slate-600">
             <tr>
-              <th className="px-4 py-2 font-semibold">#</th>
-              <th className="px-4 py-2 font-semibold">種別</th>
-              <th className="px-4 py-2 font-semibold">Xアカウント</th>
-              <th className="px-4 py-2 font-semibold">キャンペーン</th>
-              <th className="px-4 py-2 font-semibold">IP</th>
-              <th className="px-4 py-2 font-semibold">日時</th>
-              <th className="px-4 py-2" />
+              <th className="px-3 py-2 font-semibold">#</th>
+              <th className="px-3 py-2 font-semibold">種別</th>
+              <th className="px-3 py-2 font-semibold">Xアカウント</th>
+              <th className="px-3 py-2 font-semibold">フォロワー</th>
+              <th className="px-3 py-2 font-semibold">フォロー</th>
+              <th className="px-3 py-2 font-semibold">投稿</th>
+              <th className="px-3 py-2 font-semibold">キャンペーン</th>
+              <th className="px-3 py-2 font-semibold">IP</th>
+              <th className="px-3 py-2 font-semibold">日時</th>
+              <th className="px-3 py-2" />
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-slate-400">
+                <td colSpan={10} className="px-4 py-10 text-center text-slate-400">
                   該当するリードがありません
                 </td>
               </tr>
             )}
-            {rows.map((r) => (
-              <tr key={r.id} className="border-t border-slate-100 hover:bg-slate-50">
-                <td className="px-4 py-2 font-mono text-slate-400">{r.id}</td>
-                <td className="px-4 py-2">
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                      r.kind === "diagnose"
-                        ? "bg-violet-100 text-violet-700"
-                        : r.kind === "line_click"
-                        ? "bg-emerald-100 text-emerald-700"
-                        : r.kind === "line_registered"
-                        ? "bg-[#06c755]/20 text-[#04a043]"
-                        : "bg-slate-100 text-slate-700"
-                    }`}
-                  >
-                    {r.kind}
-                  </span>
-                </td>
-                <td className="px-4 py-2 font-mono font-bold text-slate-800">
-                  {r.query_username ? `@${r.query_username}` : "-"}
-                </td>
-                <td className="px-4 py-2 text-slate-600">
-                  {r.utm_campaign ? (
-                    <span className="rounded bg-amber-50 px-1.5 py-0.5 font-mono text-[10px] text-amber-700">
-                      {r.utm_campaign}
+            {rows.map((r) => {
+              const username = r.query_username ?? "";
+              const profile = username ? profiles.get(username) : undefined;
+              const avatarUrl = username
+                ? profile?.profileImageUrl ?? `https://unavatar.io/x/${username}`
+                : null;
+              return (
+                <tr key={r.id} className="border-t border-slate-100 hover:bg-slate-50">
+                  <td className="px-3 py-2 font-mono text-slate-400">{r.id}</td>
+                  <td className="px-3 py-2">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                        r.kind === "diagnose"
+                          ? "bg-violet-100 text-violet-700"
+                          : r.kind === "line_click"
+                          ? "bg-emerald-100 text-emerald-700"
+                          : r.kind === "line_registered"
+                          ? "bg-[#06c755]/20 text-[#04a043]"
+                          : "bg-slate-100 text-slate-700"
+                      }`}
+                    >
+                      {r.kind}
                     </span>
-                  ) : (
-                    <span className="text-slate-400">-</span>
-                  )}
-                </td>
-                <td className="px-4 py-2 text-slate-500">{r.ip ?? "-"}</td>
-                <td className="px-4 py-2 whitespace-nowrap text-slate-500">
-                  {new Date(r.created_at).toLocaleString("ja-JP")}
-                </td>
-                <td className="px-4 py-2 text-right">
-                  <Link
-                    href={`/admin/leads/${r.id}`}
-                    className="text-[11px] font-semibold text-violet-600 hover:underline"
-                  >
-                    詳細 →
-                  </Link>
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td className="px-3 py-2">
+                    {username ? (
+                      <a
+                        href={`https://x.com/${username}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 hover:underline"
+                      >
+                        {avatarUrl ? (
+                          <Image
+                            src={avatarUrl}
+                            alt={`@${username}`}
+                            width={24}
+                            height={24}
+                            unoptimized
+                            className="rounded-full bg-slate-100 object-cover"
+                          />
+                        ) : (
+                          <div className="h-6 w-6 rounded-full bg-slate-200" />
+                        )}
+                        <div className="flex min-w-0 flex-col">
+                          <span className="flex items-center gap-1 truncate text-[11px] font-bold text-slate-800">
+                            {profile?.displayName ?? `@${username}`}
+                            {profile?.isVerified && (
+                              <BadgeCheck className="h-3 w-3 text-blue-500" />
+                            )}
+                          </span>
+                          <span className="truncate font-mono text-[10px] text-slate-500">
+                            @{username}
+                          </span>
+                        </div>
+                      </a>
+                    ) : (
+                      <span className="text-slate-400">-</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2 font-mono text-[11px] text-slate-700">
+                    {fmtCount(profile?.followers ?? null)}
+                  </td>
+                  <td className="px-3 py-2 font-mono text-[11px] text-slate-700">
+                    {fmtCount(profile?.following ?? null)}
+                  </td>
+                  <td className="px-3 py-2 font-mono text-[11px] text-slate-700">
+                    {fmtCount(profile?.totalTweets ?? null)}
+                  </td>
+                  <td className="px-3 py-2 text-slate-600">
+                    {r.utm_campaign ? (
+                      <span className="rounded bg-amber-50 px-1.5 py-0.5 font-mono text-[10px] text-amber-700">
+                        {r.utm_campaign}
+                      </span>
+                    ) : (
+                      <span className="text-slate-400">-</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2 text-slate-500">{r.ip ?? "-"}</td>
+                  <td className="px-3 py-2 whitespace-nowrap text-slate-500">
+                    {new Date(r.created_at).toLocaleString("ja-JP")}
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    <Link
+                      href={`/admin/leads/${r.id}`}
+                      className="text-[11px] font-semibold text-violet-600 hover:underline"
+                    >
+                      詳細 →
+                    </Link>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

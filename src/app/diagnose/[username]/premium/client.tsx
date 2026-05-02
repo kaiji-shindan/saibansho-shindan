@@ -9,6 +9,7 @@ import {
   ShieldAlert,
   Eye,
   User,
+  UserSearch,
   Clock,
   Download,
   FileText,
@@ -24,6 +25,12 @@ import {
   Hash,
   FileJson,
   TableProperties,
+  Coins,
+  Building2,
+  Gavel,
+  Scroll,
+  PiggyBank,
+  type LucideIcon,
 } from "lucide-react";
 import type { DiagnosisData, ClassifiedTweet, Severity, Level, CategoryName } from "@/lib/diagnose-types";
 import { AccountProfileCard } from "@/components/account-profile";
@@ -602,32 +609,34 @@ export function PremiumClient({ username }: { username: string }) {
           <p className="mt-1.5 text-xs text-text-muted">※ 一般的な法的手続きの流れに基づく情報です</p>
 
           <div className="mt-5 grid grid-cols-2 gap-3">
-            {[
-              { icon: "👤", label: "身元特定の可能性", desc: "氏名・住所が\nプロバイダから開示される場合", tone: "red" },
-              { icon: "💰", label: "慰謝料請求の検討", desc: "名誉毀損で\n30〜100万円（参考相場）", tone: "red" },
-              { icon: "🏢", label: "職場・学校への波及", desc: "勤務先や学校に\n事実が伝わる場合", tone: "red" },
-              { icon: "⚖️", label: "刑事手続の対象", desc: "侮辱罪は懲役刑あり\n（2022年厳罰化）", tone: "red" },
-              { icon: "📄", label: "裁判記録が残る場合", desc: "判決は公開情報\nネットに名前が残ることも", tone: "amber" },
-              { icon: "💸", label: "防御費用が発生する場合", desc: "相手側も弁護士を\n雇う必要が生じうる", tone: "amber" },
-            ].map((item) => {
-              const isRed = item.tone === "red";
+            {(
+              [
+                { Icon: UserSearch, label: "身元特定の可能性", desc: "氏名・住所が\nプロバイダから開示される場合", tone: "red" },
+                { Icon: Coins,      label: "慰謝料請求の検討", desc: "名誉毀損で\n30〜100万円（参考相場）", tone: "red" },
+                { Icon: Building2,  label: "職場・学校への波及", desc: "勤務先や学校に\n事実が伝わる場合", tone: "red" },
+                { Icon: Gavel,      label: "刑事手続の対象", desc: "侮辱罪は懲役刑あり\n（2022年厳罰化）", tone: "red" },
+                { Icon: Scroll,     label: "裁判記録が残る場合", desc: "判決は公開情報\nネットに名前が残ることも", tone: "amber" },
+                { Icon: PiggyBank,  label: "防御費用が発生する場合", desc: "相手側も弁護士を\n雇う必要が生じうる", tone: "amber" },
+              ] as { Icon: LucideIcon; label: string; desc: string; tone: "red" | "amber" }[]
+            ).map(({ Icon, label, desc, tone }) => {
+              const isRed = tone === "red";
               return (
                 <div
-                  key={item.label}
-                  className={`relative overflow-hidden rounded-2xl border p-4 ${
+                  key={label}
+                  className={`relative overflow-hidden rounded-2xl border p-4 text-center ${
                     isRed
                       ? "border-red-200 bg-gradient-to-br from-red-50 to-rose-50/40"
                       : "border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50/40"
                   }`}
                 >
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/90 text-2xl shadow-sm">
-                    {item.icon}
+                  <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-white/90 shadow-sm">
+                    <Icon className={`h-5 w-5 ${isRed ? "text-red-600" : "text-amber-600"}`} />
                   </div>
                   <p className={`mt-3 text-base font-extrabold tracking-tight ${isRed ? "text-red-800" : "text-amber-900"}`}>
-                    {item.label}
+                    {label}
                   </p>
                   <p className="mt-1.5 whitespace-pre-line text-xs leading-relaxed text-text-muted">
-                    {item.desc}
+                    {desc}
                   </p>
                 </div>
               );
