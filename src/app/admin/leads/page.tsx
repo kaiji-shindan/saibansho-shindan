@@ -52,6 +52,25 @@ function fmtCount(n: number | null): string {
   return n.toLocaleString("ja-JP");
 }
 
+/** Format an ISO timestamp as JST 24-hour clock (yyyy/m/d HH:mm:ss). */
+function fmtJst(iso: string): string {
+  const d = new Date(iso);
+  const date = new Intl.DateTimeFormat("ja-JP", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+  }).format(d);
+  const time = new Intl.DateTimeFormat("ja-JP", {
+    timeZone: "Asia/Tokyo",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).format(d);
+  return `${date} ${time}`;
+}
+
 export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 50;
@@ -343,7 +362,7 @@ export default async function LeadsPage({
                     {fmtCount(profile?.totalTweets ?? null)}
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-xs text-slate-500">
-                    {new Date(r.created_at).toLocaleString("ja-JP")}
+                    {fmtJst(r.created_at)}
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-right">
                     <Link

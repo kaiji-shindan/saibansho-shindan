@@ -169,20 +169,31 @@ const TEMPLATES = [
 // ============================================================
 // Main component
 // ============================================================
+function isMockPreview(): boolean {
+  if (typeof window === "undefined") return false;
+  return new URLSearchParams(window.location.search).get("mock") === "1";
+}
+
 export function PremiumClient({ username }: { username: string }) {
   const [data, setData] = useState<DiagnosisData | null>(null);
   const [error, setError] = useState<string | null>(null);
   // LINE gate: プレミアムコンテンツは LINE ゲート通過ユーザーのみに開放する。
   // null = 判定中（SSR 直後）, true/false = 判定済み
   // SSR では必ず null、CSR 側の最初の render 以降は lazy init で一発判定。
-  const [lineVerified, setLineVerified] = useState<boolean | null>(() =>
-    typeof window === "undefined" ? null : isLineVerifiedClient(),
-  );
+  // ?mock=1（admin プレビュー）の時は常に「通過済み」扱いにして
+  // LINE 誘導 UI が出ないようにする。
+  const [lineVerified, setLineVerified] = useState<boolean | null>(() => {
+    if (typeof window === "undefined") return null;
+    if (isMockPreview()) return true;
+    return isLineVerifiedClient();
+  });
 
   // Cookie はタブをまたいだ外部イベントで変わる可能性があるので、
   // 戻ってきたときに再評価する (setState-in-effect ではなく外部イベント購読)。
+  // ?mock=1 の時はゲート判定そのものを無効化。
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (isMockPreview()) return;
     const onVisibility = () => {
       const next = isLineVerifiedClient();
       setLineVerified((prev) => (prev === next ? prev : next));

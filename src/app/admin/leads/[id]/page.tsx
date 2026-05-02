@@ -9,6 +9,25 @@ import { getLeadById, getSessionTimeline, type LeadRow } from "@/lib/leads";
 
 export const dynamic = "force-dynamic";
 
+/** Format an ISO timestamp as JST 24-hour clock (yyyy/m/d HH:mm:ss). */
+function fmtJst(iso: string): string {
+  const d = new Date(iso);
+  const date = new Intl.DateTimeFormat("ja-JP", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+  }).format(d);
+  const time = new Intl.DateTimeFormat("ja-JP", {
+    timeZone: "Asia/Tokyo",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).format(d);
+  return `${date} ${time}`;
+}
+
 function kindBadge(kind: string): string {
   switch (kind) {
     case "diagnose":
@@ -66,9 +85,7 @@ export default async function LeadDetailPage({
             {lead.kind}
           </span>
         </h1>
-        <p className="mt-1 text-xs text-slate-500">
-          {new Date(lead.created_at).toLocaleString("ja-JP")}
-        </p>
+        <p className="mt-1 text-xs text-slate-500">{fmtJst(lead.created_at)}</p>
       </div>
 
       {/* ===== Overview ===== */}
@@ -137,7 +154,7 @@ export default async function LeadDetailPage({
                     {t.query_username ? `@${t.query_username}` : "-"}
                   </td>
                   <td className="px-4 py-2 whitespace-nowrap text-slate-500">
-                    {new Date(t.created_at).toLocaleString("ja-JP")}
+                    {fmtJst(t.created_at)}
                   </td>
                 </tr>
               ))}
