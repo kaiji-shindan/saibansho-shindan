@@ -744,11 +744,11 @@ export function PremiumClient({ username }: { username: string }) {
           <h3 className="mt-1 text-base sm:text-lg font-extrabold tracking-tight">請求書テンプレート（参考フォーマット）</h3>
           <p className="mt-1 text-[12px] text-text-muted">専門家への相談時に活用できる参考フォーマット集</p>
 
-          <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
+          <div className="mt-4 space-y-2.5">
             {TEMPLATES.map((tpl) => (
               <button
                 key={tpl.title}
-                className="group flex items-center gap-3 rounded-2xl border border-border bg-white p-4 text-left shadow-[0_2px_12px_-4px_rgba(15,23,42,0.06)] active:scale-[0.98]"
+                className="group flex w-full items-center gap-3 rounded-2xl border border-border bg-white p-4 text-left shadow-[0_2px_12px_-4px_rgba(15,23,42,0.06)] active:scale-[0.98]"
               >
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-100 to-indigo-100">
                   <FileText className="h-5 w-5 text-violet-600" />
