@@ -331,6 +331,113 @@ export async function getCampaignStats(limit = 8): Promise<CampaignStat[]> {
     .slice(0, limit);
 }
 
+// ------------------------------------------------------------
+// Ranking — most-diagnosed accounts in a given window
+// ------------------------------------------------------------
+export type InsightsPeriod = "24h" | "7d" | "30d" | "all";
+
+export interface DiagnoseRankRow {
+  username: string;
+  diagnoseCount: number;
+  lineClickCount: number;
+  uniqueSessions: number;
+  firstAt: string;
+  lastAt: string;
+}
+
+function periodSinceIso(period: InsightsPeriod): string | null {
+  const now = Date.now();
+  switch (period) {
+    case "24h": return new Date(now - 24 * 60 * 60 * 1000).toISOString();
+    case "7d":  return new Date(now - 7  * 24 * 60 * 60 * 1000).toISOString();
+    case "30d": return new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString();
+    case "all": return null;
+  }
+}
+
+export async function getDiagnoseRanking(
+  period: InsightsPeriod = "7d",
+  limit = 50,
+): Promise<DiagnoseRankRow[]> {
+  const since = periodSinceIso(period);
+
+  type RankRow = {
+    query_username: string | null;
+    kind: LeadKind;
+    session_id: string | null;
+    created_at: string;
+  };
+
+  let rows: RankRow[] = [];
+  const sb = getSupabase();
+  if (!sb) {
+    rows = memStore
+      .filter((r) => (since ? r.created_at >= since : true))
+      .map((r) => ({
+        query_username: r.query_username,
+        kind: r.kind,
+        session_id: r.session_id,
+        created_at: r.created_at,
+      }));
+  } else {
+    let q = sb
+      .from("leads")
+      .select("query_username, kind, session_id, created_at")
+      .in("kind", ["diagnose", "line_click"])
+      .not("query_username", "is", null)
+      .limit(50_000);
+    if (since) q = q.gte("created_at", since);
+    const { data, error } = await q;
+    if (error) {
+      console.warn("[leads] ranking fetch failed:", error.message);
+      return [];
+    }
+    rows = (data ?? []) as RankRow[];
+  }
+
+  const map = new Map<string, DiagnoseRankRow & { sessions: Set<string> }>();
+  for (const r of rows) {
+    const handle = r.query_username;
+    if (!handle) continue;
+    const key = handle.toLowerCase();
+    let entry = map.get(key);
+    if (!entry) {
+      entry = {
+        username: handle,
+        diagnoseCount: 0,
+        lineClickCount: 0,
+        uniqueSessions: 0,
+        firstAt: r.created_at,
+        lastAt: r.created_at,
+        sessions: new Set<string>(),
+      };
+      map.set(key, entry);
+    }
+    if (r.kind === "diagnose") entry.diagnoseCount += 1;
+    else if (r.kind === "line_click") entry.lineClickCount += 1;
+    if (r.session_id) entry.sessions.add(r.session_id);
+    if (r.created_at < entry.firstAt) entry.firstAt = r.created_at;
+    if (r.created_at > entry.lastAt) entry.lastAt = r.created_at;
+  }
+
+  return [...map.values()]
+    .map(({ sessions, ...rest }) => ({ ...rest, uniqueSessions: sessions.size }))
+    .filter((r) => r.diagnoseCount > 0)
+    .sort((a, b) => {
+      if (b.diagnoseCount !== a.diagnoseCount) return b.diagnoseCount - a.diagnoseCount;
+      return b.lastAt.localeCompare(a.lastAt);
+    })
+    .slice(0, limit);
+}
+
+/** Daily diagnose / line_click time series scoped to a period. */
+export async function getInsightsTrend(
+  period: InsightsPeriod,
+): Promise<DailyPoint[]> {
+  const days = period === "24h" ? 1 : period === "7d" ? 7 : period === "30d" ? 30 : 90;
+  return getDailySeries(days);
+}
+
 export interface ListLeadsOptions {
   kind?: LeadKind;
   limit?: number;

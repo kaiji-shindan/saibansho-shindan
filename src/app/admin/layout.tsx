@@ -7,7 +7,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { LayoutDashboard, Users, FileDown, Eye } from "lucide-react";
+import { LayoutDashboard, Users, FileDown, Eye, BarChart3 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +51,13 @@ export default function AdminLayout({
               >
                 <Users className="h-4 w-4" />
                 リード一覧
+              </Link>
+              <Link
+                href="/admin/insights"
+                className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-900"
+              >
+                <BarChart3 className="h-4 w-4" />
+                インサイト
               </Link>
               <a
                 href="/admin/leads.csv"

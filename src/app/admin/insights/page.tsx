@@ -1,0 +1,303 @@
+// ============================================================
+// /admin/insights — 集計ダッシュボード
+//
+// 「期間 × 診断回数の多いアカウント」を一覧化する画面。
+// データソース: Supabase の leads テーブル（kind='diagnose' / 'line_click'）。
+// X プロフィール（アバター・フォロワー数）は diagnose_cache から hydrate。
+// ============================================================
+
+import Link from "next/link";
+import Image from "next/image";
+import { FileDown, TrendingUp } from "lucide-react";
+import {
+  getDiagnoseRanking,
+  getInsightsTrend,
+  getProfileSnapshots,
+  type InsightsPeriod,
+  type DailyPoint,
+  type DiagnoseRankRow,
+  type XProfileSnapshot,
+} from "@/lib/leads";
+
+export const dynamic = "force-dynamic";
+
+const PERIOD_LABELS: Record<InsightsPeriod, string> = {
+  "24h": "24時間",
+  "7d": "7日間",
+  "30d": "30日間",
+  "all": "全期間",
+};
+
+const VALID_PERIODS: InsightsPeriod[] = ["24h", "7d", "30d", "all"];
+
+function fmtJst(iso: string): string {
+  const d = new Date(iso);
+  return new Intl.DateTimeFormat("ja-JP", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(d);
+}
+
+function fmtNum(n: number | null | undefined): string {
+  if (n == null) return "—";
+  return n.toLocaleString("ja-JP");
+}
+
+// ============================================================
+// SVG line chart (no external dep)
+// ============================================================
+function TrendChart({ data }: { data: DailyPoint[] }) {
+  const W = 760;
+  const H = 180;
+  const PAD_L = 36;
+  const PAD_R = 16;
+  const PAD_T = 16;
+  const PAD_B = 28;
+
+  const inner = { w: W - PAD_L - PAD_R, h: H - PAD_T - PAD_B };
+  const max = Math.max(1, ...data.map((d) => Math.max(d.diagnose, d.lineClick)));
+
+  const points = (key: "diagnose" | "lineClick") =>
+    data
+      .map((d, i) => {
+        const x = PAD_L + (i / Math.max(1, data.length - 1)) * inner.w;
+        const y = PAD_T + inner.h - (d[key] / max) * inner.h;
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      })
+      .join(" ");
+
+  const xLabels = data
+    .map((d, i) => ({ x: PAD_L + (i / Math.max(1, data.length - 1)) * inner.w, label: d.date.slice(5) }))
+    .filter((_, i) => i % Math.max(1, Math.floor(data.length / 6)) === 0);
+
+  const yTicks = [0, Math.round(max / 2), max];
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full text-slate-500" preserveAspectRatio="xMidYMid meet">
+      {/* horizontal grid */}
+      {yTicks.map((t) => {
+        const y = PAD_T + inner.h - (t / max) * inner.h;
+        return (
+          <g key={t}>
+            <line x1={PAD_L} x2={W - PAD_R} y1={y} y2={y} stroke="currentColor" strokeOpacity="0.12" strokeDasharray="3 3" />
+            <text x={PAD_L - 6} y={y + 3} fontSize="9" textAnchor="end" fill="currentColor" fillOpacity="0.6">{t}</text>
+          </g>
+        );
+      })}
+      {/* x labels */}
+      {xLabels.map((l) => (
+        <text key={l.x} x={l.x} y={H - 8} fontSize="9" textAnchor="middle" fill="currentColor" fillOpacity="0.6">
+          {l.label}
+        </text>
+      ))}
+      {/* line: line_click (背面) */}
+      <polyline points={points("lineClick")} fill="none" stroke="#06c755" strokeWidth="1.5" strokeOpacity="0.65" />
+      {/* line: diagnose (前面) */}
+      <polyline points={points("diagnose")} fill="none" stroke="#7c3aed" strokeWidth="2" />
+      {/* dots — diagnose only */}
+      {data.map((d, i) => {
+        const x = PAD_L + (i / Math.max(1, data.length - 1)) * inner.w;
+        const y = PAD_T + inner.h - (d.diagnose / max) * inner.h;
+        return <circle key={i} cx={x} cy={y} r="2" fill="#7c3aed" />;
+      })}
+    </svg>
+  );
+}
+
+// ============================================================
+// Page
+// ============================================================
+export default async function InsightsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ period?: string }>;
+}) {
+  const sp = await searchParams;
+  const period = (VALID_PERIODS.includes(sp.period as InsightsPeriod)
+    ? (sp.period as InsightsPeriod)
+    : "7d") as InsightsPeriod;
+
+  // 並列で集計
+  const [ranking, trend] = await Promise.all([
+    getDiagnoseRanking(period, 50),
+    getInsightsTrend(period),
+  ]);
+
+  const profiles = await getProfileSnapshots(ranking.map((r) => r.username));
+
+  const totalDiagnose = ranking.reduce((acc, r) => acc + r.diagnoseCount, 0);
+  const totalLineClick = ranking.reduce((acc, r) => acc + r.lineClickCount, 0);
+  const uniqueAccounts = ranking.length;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-extrabold tracking-tight">インサイト</h1>
+          <p className="mt-1 text-xs text-slate-500">
+            診断回数の多い X アカウントを期間別に集計します。診断ログ自体は Supabase に永続保存されています。
+          </p>
+        </div>
+        <a
+          href={`/admin/insights.csv?period=${period}`}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-white px-3 py-1.5 text-xs font-semibold text-violet-700 hover:bg-violet-50"
+        >
+          <FileDown className="h-3.5 w-3.5" />
+          CSV
+        </a>
+      </div>
+
+      {/* Period tabs */}
+      <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1">
+        {VALID_PERIODS.map((p) => {
+          const active = p === period;
+          return (
+            <Link
+              key={p}
+              href={`/admin/insights?period=${p}`}
+              className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${
+                active ? "bg-violet-600 text-white" : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              {PERIOD_LABELS[p]}
+            </Link>
+          );
+        })}
+      </div>
+
+      {/* Summary cards */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <SummaryCard label="診断回数 (合計)" value={fmtNum(totalDiagnose)} accent="text-violet-600" />
+        <SummaryCard label="ユニーク対象アカウント数" value={fmtNum(uniqueAccounts)} accent="text-indigo-600" />
+        <SummaryCard label="LINE 友達追加クリック" value={fmtNum(totalLineClick)} accent="text-emerald-600" />
+      </div>
+
+      {/* Trend chart */}
+      <section className="rounded-2xl border border-slate-200 bg-white p-5">
+        <div className="flex items-center gap-2">
+          <TrendingUp className="h-4 w-4 text-violet-500" />
+          <h2 className="text-sm font-extrabold">日次推移</h2>
+          <span className="ml-auto inline-flex items-center gap-3 text-[11px] font-semibold text-slate-500">
+            <span className="inline-flex items-center gap-1">
+              <span className="h-1.5 w-3 rounded-full bg-violet-600" /> 診断
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="h-1.5 w-3 rounded-full bg-[#06c755]" /> LINEクリック
+            </span>
+          </span>
+        </div>
+        <div className="mt-3">
+          <TrendChart data={trend} />
+        </div>
+      </section>
+
+      {/* Ranking table */}
+      <section>
+        <h2 className="text-sm font-extrabold">
+          診断回数ランキング ({PERIOD_LABELS[period]})
+        </h2>
+        <p className="mt-1 text-[11px] text-slate-500">
+          上位50件まで表示。同一 X アカウントへの診断は大文字小文字を区別せずに集計します。
+        </p>
+        <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[900px] text-left text-xs">
+              <thead className="bg-slate-50 text-slate-600">
+                <tr>
+                  <th className="whitespace-nowrap px-4 py-3 font-semibold">#</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-semibold">Xアカウント</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-semibold">診断回数</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-semibold">ユニークSession</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-semibold">LINEクリック</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-semibold">フォロワー</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-semibold">初回</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-semibold">直近</th>
+                  <th className="px-4 py-3" />
+                </tr>
+              </thead>
+              <tbody>
+                {ranking.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="px-4 py-8 text-center text-slate-400">
+                      この期間の診断データはありません。
+                    </td>
+                  </tr>
+                ) : (
+                  ranking.map((row, i) => (
+                    <RankRow key={row.username} idx={i + 1} row={row} profile={profiles.get(row.username)} />
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function SummaryCard({ label, value, accent }: { label: string; value: string; accent: string }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{label}</p>
+      <p className={`mt-1 text-2xl font-extrabold tracking-tight ${accent}`}>{value}</p>
+    </div>
+  );
+}
+
+function RankRow({
+  idx,
+  row,
+  profile,
+}: {
+  idx: number;
+  row: DiagnoseRankRow;
+  profile: XProfileSnapshot | undefined;
+}) {
+  const handle = row.username;
+  const display = profile?.displayName?.trim() || `@${handle}`;
+  const avatar = profile?.profileImageUrl ?? `https://unavatar.io/x/${handle}`;
+
+  return (
+    <tr className="border-t border-slate-100">
+      <td className="px-4 py-3 font-mono text-slate-400">{idx}</td>
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-2.5">
+          <Image
+            src={avatar}
+            alt={`@${handle}`}
+            width={32}
+            height={32}
+            className="h-8 w-8 rounded-full object-cover"
+            unoptimized
+          />
+          <div className="min-w-0">
+            <p className="truncate font-extrabold">{display}</p>
+            <p className="truncate font-mono text-[11px] text-slate-500">@{handle}</p>
+          </div>
+        </div>
+      </td>
+      <td className="whitespace-nowrap px-4 py-3 text-sm font-extrabold text-violet-700">
+        {fmtNum(row.diagnoseCount)}
+      </td>
+      <td className="whitespace-nowrap px-4 py-3 text-slate-600">{fmtNum(row.uniqueSessions)}</td>
+      <td className="whitespace-nowrap px-4 py-3 text-emerald-600">{fmtNum(row.lineClickCount)}</td>
+      <td className="whitespace-nowrap px-4 py-3 text-slate-600">{fmtNum(profile?.followers ?? null)}</td>
+      <td className="whitespace-nowrap px-4 py-3 text-slate-500">{fmtJst(row.firstAt)}</td>
+      <td className="whitespace-nowrap px-4 py-3 text-slate-500">{fmtJst(row.lastAt)}</td>
+      <td className="whitespace-nowrap px-4 py-3 text-right">
+        <Link
+          href={`/admin/leads?username=${encodeURIComponent(handle)}`}
+          className="text-violet-600 hover:underline"
+        >
+          詳細→
+        </Link>
+      </td>
+    </tr>
+  );
+}
