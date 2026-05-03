@@ -217,10 +217,24 @@ export function LiffClient({ username: initialUsername }: { username: string }) 
             </p>
             <p className="mt-3 text-sm leading-relaxed text-text-sub">
               <strong className="text-foreground">@{username}</strong> の詳細レポートを
-              <br />LINE のトーク画面にお送りしました。
+              <br />公式LINEのトーク画面にお送りしました。
             </p>
-            <p className="mt-4 text-[12px] text-text-muted">
-              このウィンドウは閉じて、LINE のトークをご確認ください。
+            <a
+              href={
+                process.env.NEXT_PUBLIC_LINE_ADD_FRIEND_URL ??
+                "https://lin.ee/SKMMS4PJ"
+              }
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#06c755] to-[#04a043] px-6 py-4 text-base font-extrabold text-white shadow-lg shadow-[#06c755]/30 active:scale-[0.97]"
+            >
+              <Image src="/icon_line.png" alt="" width={20} height={20} />
+              公式LINEを開く
+            </a>
+            <p className="mt-3 text-[11px] leading-relaxed text-text-muted">
+              ※ 友だち未追加の場合は、開いた画面で
+              <strong className="text-foreground">「追加」</strong>
+              をタップしてください。
             </p>
           </>
         )}
