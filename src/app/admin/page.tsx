@@ -4,6 +4,7 @@
 // ============================================================
 
 import Link from "next/link";
+import Image from "next/image";
 import {
   getLeadStats,
   listLeads,
@@ -11,6 +12,8 @@ import {
   getDailySeries,
   getSupabaseHealth,
   getLinePendingLinks,
+  getProfileSnapshots,
+  type XProfileSnapshot,
 } from "@/lib/leads";
 import { DailyChart } from "@/components/admin/daily-chart";
 
@@ -18,6 +21,37 @@ export const dynamic = "force-dynamic";
 
 function fmt(n: number): string {
   return n.toLocaleString("ja-JP");
+}
+
+/** Avatar + linked @handle. Opens the X profile in a new tab. */
+function AccountInline({
+  handle,
+  profile,
+}: {
+  handle: string | null;
+  profile?: XProfileSnapshot;
+}) {
+  if (!handle) return <span className="text-slate-400">-</span>;
+  const avatar = profile?.profileImageUrl ?? `https://unavatar.io/x/${handle}`;
+  return (
+    <a
+      href={`https://x.com/${handle}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-2 align-middle hover:underline"
+      title={`@${handle} を X で開く`}
+    >
+      <Image
+        src={avatar}
+        alt={`@${handle}`}
+        width={20}
+        height={20}
+        className="h-5 w-5 shrink-0 rounded-full bg-slate-100 object-cover"
+        unoptimized
+      />
+      <span className="font-mono font-bold text-slate-800">@{handle}</span>
+    </a>
+  );
 }
 
 function relTime(iso: string): string {
@@ -45,6 +79,17 @@ export default async function AdminDashboardPage() {
     ]);
 
   const topCampaignDiagnoses = Math.max(1, ...campaigns.map((c) => c.diagnoses));
+
+  // 直近イベント全行のユニーク username をまとめて X プロフィールスナップショット取得
+  const eventHandles = [
+    ...recentDiagnose,
+    ...recentLine,
+    ...recentXOauth,
+  ]
+    .map((r) => r.query_username ?? "")
+    .filter(Boolean);
+  const linkHandles = lineLinks.map((l) => l.pending_username ?? "").filter(Boolean);
+  const profiles = await getProfileSnapshots([...eventHandles, ...linkHandles]);
 
   const kpis = [
     { label: "総診断数", value: fmt(stats.totalDiagnose), sub: `直近24h: ${fmt(stats.last24hDiagnose)}`, accent: "text-violet-600" },
@@ -120,7 +165,12 @@ export default async function AdminDashboardPage() {
                 {lineLinks.map((l) => (
                   <tr key={l.line_user_id} className="border-t border-slate-100">
                     <td className="px-4 py-2 font-bold text-slate-800">{l.display_name ?? "(不明)"}</td>
-                    <td className="px-4 py-2 font-mono font-bold text-indigo-700">@{l.pending_username}</td>
+                    <td className="px-4 py-2">
+                      <AccountInline
+                        handle={l.pending_username}
+                        profile={l.pending_username ? profiles.get(l.pending_username) : undefined}
+                      />
+                    </td>
                     <td className="px-4 py-2 font-mono text-[10px] text-slate-500">
                       {l.line_user_id.slice(0, 12) + "…"}
                     </td>
@@ -228,19 +278,11 @@ export default async function AdminDashboardPage() {
               )}
               {recentDiagnose.map((r) => (
                 <tr key={r.id} className="border-t border-slate-100">
-                  <td className="px-4 py-2 font-mono font-bold text-slate-800">
-                    {r.query_username ? (
-                      <a
-                        href={`https://x.com/${r.query_username}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="hover:underline"
-                      >
-                        @{r.query_username}
-                      </a>
-                    ) : (
-                      "-"
-                    )}
+                  <td className="px-4 py-2">
+                    <AccountInline
+                      handle={r.query_username}
+                      profile={r.query_username ? profiles.get(r.query_username) : undefined}
+                    />
                   </td>
                   <td className="px-4 py-2 font-mono text-[10px] text-slate-500">
                     {r.session_id ? r.session_id.slice(0, 10) + "…" : "-"}
@@ -278,19 +320,11 @@ export default async function AdminDashboardPage() {
               )}
               {recentXOauth.map((r) => (
                 <tr key={r.id} className="border-t border-slate-100">
-                  <td className="px-4 py-2 font-mono font-bold text-slate-800">
-                    {r.query_username ? (
-                      <a
-                        href={`https://x.com/${r.query_username}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="hover:underline"
-                      >
-                        @{r.query_username}
-                      </a>
-                    ) : (
-                      "-"
-                    )}
+                  <td className="px-4 py-2">
+                    <AccountInline
+                      handle={r.query_username}
+                      profile={r.query_username ? profiles.get(r.query_username) : undefined}
+                    />
                   </td>
                   <td className="px-4 py-2 font-mono text-[10px] text-slate-500">{r.x_user_id ?? "-"}</td>
                   <td className="px-4 py-2 font-mono text-[10px] text-slate-500">
@@ -327,19 +361,11 @@ export default async function AdminDashboardPage() {
               )}
               {recentLine.map((r) => (
                 <tr key={r.id} className="border-t border-slate-100">
-                  <td className="px-4 py-2 font-mono font-bold text-slate-800">
-                    {r.query_username ? (
-                      <a
-                        href={`https://x.com/${r.query_username}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="hover:underline"
-                      >
-                        @{r.query_username}
-                      </a>
-                    ) : (
-                      "-"
-                    )}
+                  <td className="px-4 py-2">
+                    <AccountInline
+                      handle={r.query_username}
+                      profile={r.query_username ? profiles.get(r.query_username) : undefined}
+                    />
                   </td>
                   <td className="px-4 py-2 font-mono text-[10px] text-slate-500">
                     {r.session_id ? r.session_id.slice(0, 10) + "…" : "-"}

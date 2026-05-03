@@ -42,6 +42,7 @@ create table if not exists leads (
   session_id     text,
   line_user_id   text,
   x_user_id      text,
+  x_username     text,            -- X OAuth でログインした診断者の handle (本人/第三者判定に使用)
   user_agent     text,
   ip             text,
   referrer       text,
@@ -74,6 +75,10 @@ begin
     alter table leads add column utm_term     text;
     alter table leads add column landing_path text;
     create index if not exists leads_utm_campaign_idx on leads(utm_campaign);
+  end if;
+  if not exists (select 1 from information_schema.columns
+                 where table_name = 'leads' and column_name = 'x_username') then
+    alter table leads add column x_username text;
   end if;
 end $$;
 

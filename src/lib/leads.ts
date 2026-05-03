@@ -45,6 +45,7 @@ export interface LeadInput extends Attribution {
   sessionId?: string | null;
   lineUserId?: string | null;
   xUserId?: string | null;
+  xUsername?: string | null;
   userAgent?: string | null;
   ip?: string | null;
   referrer?: string | null;
@@ -57,6 +58,7 @@ export interface LeadRow {
   session_id: string | null;
   line_user_id: string | null;
   x_user_id: string | null;
+  x_username: string | null;
   user_agent: string | null;
   ip: string | null;
   referrer: string | null;
@@ -92,6 +94,7 @@ export async function recordLead(input: LeadInput): Promise<void> {
     session_id: input.sessionId ?? null,
     line_user_id: input.lineUserId ?? null,
     x_user_id: input.xUserId ?? null,
+    x_username: input.xUsername ?? null,
     user_agent: input.userAgent ?? null,
     ip: input.ip ?? null,
     referrer: input.referrer ?? null,
@@ -662,6 +665,78 @@ export async function getProfileSnapshots(
   }
 
   return map;
+}
+
+// ------------------------------------------------------------
+// Diagnoser list — for a given target X username, list every X
+// account that authenticated on /premium for that target.
+// ------------------------------------------------------------
+export interface DiagnoserRow {
+  xUserId: string | null;
+  xUsername: string | null;
+  isSelfDiagnose: boolean;
+  count: number;
+  firstAt: string;
+  lastAt: string;
+}
+
+export async function getDiagnosersFor(targetUsername: string): Promise<DiagnoserRow[]> {
+  if (!targetUsername) return [];
+
+  const sb = getSupabase();
+  let rows: Pick<LeadRow, "x_user_id" | "x_username" | "created_at">[] = [];
+
+  if (!sb) {
+    rows = memStore
+      .filter(
+        (r) =>
+          r.kind === "x_oauth" &&
+          (r.query_username ?? "").toLowerCase() === targetUsername.toLowerCase(),
+      )
+      .map((r) => ({
+        x_user_id: r.x_user_id,
+        x_username: r.x_username,
+        created_at: r.created_at,
+      }));
+  } else {
+    const { data, error } = await sb
+      .from("leads")
+      .select("x_user_id, x_username, created_at")
+      .eq("kind", "x_oauth")
+      .ilike("query_username", targetUsername)
+      .limit(500);
+    if (error) {
+      console.warn("[leads] getDiagnosersFor failed:", error.message);
+      return [];
+    }
+    rows = (data ?? []) as typeof rows;
+  }
+
+  const targetLower = targetUsername.toLowerCase();
+  const map = new Map<string, DiagnoserRow>();
+  for (const r of rows) {
+    const key = r.x_user_id ?? `handle:${r.x_username ?? "?"}`;
+    let entry = map.get(key);
+    if (!entry) {
+      entry = {
+        xUserId: r.x_user_id,
+        xUsername: r.x_username,
+        isSelfDiagnose: (r.x_username ?? "").toLowerCase() === targetLower,
+        count: 0,
+        firstAt: r.created_at,
+        lastAt: r.created_at,
+      };
+      map.set(key, entry);
+    }
+    entry.count += 1;
+    if (r.created_at < entry.firstAt) entry.firstAt = r.created_at;
+    if (r.created_at > entry.lastAt) entry.lastAt = r.created_at;
+  }
+
+  return [...map.values()].sort((a, b) => {
+    if (a.isSelfDiagnose !== b.isSelfDiagnose) return a.isSelfDiagnose ? -1 : 1;
+    return b.lastAt.localeCompare(a.lastAt);
+  });
 }
 
 // ------------------------------------------------------------

@@ -60,13 +60,25 @@ export async function GET(req: NextRequest) {
     return errorRedirect(url.origin, "token_exchange_failed");
   }
 
+  // ----- Extract the diagnose target from returnTo path -----
+  // returnTo は通常 "/diagnose/<target>/premium..." の形なので、ここから対象を抜く。
+  // 取れなければ null (歴史的にこの時点では取れていなかった)。
+  let diagnoseTarget: string | null = null;
+  try {
+    const m = returnTo.match(/^\/diagnose\/([^\/?#]+)(?:\/|$|\?|#)/);
+    if (m) diagnoseTarget = decodeURIComponent(m[1]).replace(/^@/, "");
+  } catch { /* ignore */ }
+
   // ----- Record the lead -----
+  // query_username = 診断対象 (本人/第三者判定の基準)
+  // x_user_id / x_username = 認証された診断者の X 情報
   const info = extractClientInfo(req);
   recordLead({
     kind: "x_oauth",
-    queryUsername: xUsername,
+    queryUsername: diagnoseTarget,
     sessionId: info.sessionId,
     xUserId,
+    xUsername,
     ip: info.ip,
     userAgent: info.userAgent,
     referrer: info.referrer,

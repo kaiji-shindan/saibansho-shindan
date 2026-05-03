@@ -4,8 +4,15 @@
 // ============================================================
 
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
-import { getLeadById, getSessionTimeline, type LeadRow } from "@/lib/leads";
+import {
+  getLeadById,
+  getSessionTimeline,
+  getProfileSnapshots,
+  getDiagnosersFor,
+  type LeadRow,
+} from "@/lib/leads";
 
 export const dynamic = "force-dynamic";
 
@@ -70,6 +77,44 @@ export default async function LeadDetailPage({
     ? await getSessionTimeline(lead.session_id)
     : [lead];
 
+  // X 認証済み診断者一覧（この対象を診断した X アカウント）
+  const diagnosers = lead.query_username
+    ? await getDiagnosersFor(lead.query_username)
+    : [];
+
+  // Hydrate avatar / display name for every account that appears on this page
+  const handles = [
+    lead.query_username,
+    ...timeline.map((t) => t.query_username),
+    ...diagnosers.map((d) => d.xUsername),
+  ].filter((u): u is string => Boolean(u));
+  const profiles = await getProfileSnapshots(handles);
+
+  function AccountInline({ handle }: { handle: string | null }) {
+    if (!handle) return <span className="text-slate-400">-</span>;
+    const p = profiles.get(handle);
+    const avatar = p?.profileImageUrl ?? `https://unavatar.io/x/${handle}`;
+    return (
+      <a
+        href={`https://x.com/${handle}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1.5 align-middle hover:underline"
+        title={`@${handle} を X で開く`}
+      >
+        <Image
+          src={avatar}
+          alt={`@${handle}`}
+          width={20}
+          height={20}
+          className="h-5 w-5 shrink-0 rounded-full bg-slate-100 object-cover"
+          unoptimized
+        />
+        <span className="font-mono font-bold text-slate-800">@{handle}</span>
+      </a>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -94,18 +139,9 @@ export default async function LeadDetailPage({
         <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
           <div className="rounded-lg border border-slate-200 bg-white p-3">
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Xアカウント</p>
-            {lead.query_username ? (
-              <a
-                href={`https://x.com/${lead.query_username}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-1 block break-all font-mono text-xs font-bold text-violet-700 hover:underline"
-              >
-                @{lead.query_username} ↗
-              </a>
-            ) : (
-              <p className="mt-1 break-all font-mono text-xs text-slate-400">—</p>
-            )}
+            <div className="mt-1 text-xs">
+              <AccountInline handle={lead.query_username} />
+            </div>
           </div>
           <Field label="Session ID" value={lead.session_id} />
           <Field label="IP" value={lead.ip} />
@@ -139,6 +175,67 @@ export default async function LeadDetailPage({
         </p>
       </section>
 
+      {/* ===== X 認証済み診断者 — 「この対象を誰が診断したか」を可視化 ===== */}
+      {lead.query_username && (
+        <section>
+          <h2 className="text-sm font-extrabold">
+            X 認証済み診断者
+            <span className="ml-2 text-[10px] font-medium text-slate-500">
+              (premium 段階で X ログインしたユーザー)
+            </span>
+          </h2>
+          {diagnosers.length === 0 ? (
+            <div className="mt-3 rounded-xl border border-slate-200 bg-white px-4 py-6 text-center text-xs text-slate-400">
+              まだ X 認証済みの診断者はいません。
+              <br />
+              <span className="text-[10px]">
+                ※ 診断者が /premium で X ログインしないと記録されません。LINE 登録までで離脱した人は把握不可。
+              </span>
+            </div>
+          ) : (
+            <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 text-slate-600">
+                  <tr>
+                    <th className="px-4 py-2 font-semibold">診断者</th>
+                    <th className="px-4 py-2 font-semibold">関係</th>
+                    <th className="px-4 py-2 font-semibold">診断回数</th>
+                    <th className="px-4 py-2 font-semibold">初回</th>
+                    <th className="px-4 py-2 font-semibold">直近</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {diagnosers.map((d) => (
+                    <tr key={d.xUserId ?? d.xUsername} className="border-t border-slate-100">
+                      <td className="px-4 py-3">
+                        <AccountInline handle={d.xUsername} />
+                      </td>
+                      <td className="px-4 py-3">
+                        {d.isSelfDiagnose ? (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold text-emerald-700">
+                            本人診断
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-extrabold text-slate-700">
+                            第三者診断
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 font-extrabold text-violet-700">{d.count}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-slate-500">{fmtJst(d.firstAt)}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-slate-500">{fmtJst(d.lastAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <p className="mt-2 text-[10px] text-slate-400">
+            ※ 「本人診断」は対象 X ハンドルとログイン X ハンドルが一致したケース。被害者本人リードとして弁護士事務所に高単価提供できる候補。
+          </p>
+        </section>
+      )}
+
       {/* ===== Session timeline ===== */}
       <section>
         <h2 className="text-sm font-extrabold">同一セッションのアクション履歴</h2>
@@ -164,19 +261,8 @@ export default async function LeadDetailPage({
                       {t.kind}
                     </span>
                   </td>
-                  <td className="px-4 py-2 font-mono font-bold">
-                    {t.query_username ? (
-                      <a
-                        href={`https://x.com/${t.query_username}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="hover:underline"
-                      >
-                        @{t.query_username}
-                      </a>
-                    ) : (
-                      "-"
-                    )}
+                  <td className="px-4 py-2">
+                    <AccountInline handle={t.query_username} />
                   </td>
                   <td className="px-4 py-2 whitespace-nowrap text-slate-500">
                     {fmtJst(t.created_at)}
