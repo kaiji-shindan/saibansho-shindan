@@ -57,7 +57,7 @@ const VALUE_PROPS = [
 ];
 
 const WHAT_YOU_GET = [
-  "診断エンジン本体（X API v2 + Claude Haiku 分類）",
+  "診断エンジン本体",
   "フロントエンド LP + 診断結果ページ",
   "LINE 登録リード獲得フロー",
   "弁護士事務所向け管理画面（ダッシュボード / リスト / CSV）",

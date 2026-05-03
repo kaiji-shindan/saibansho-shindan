@@ -615,7 +615,7 @@ export function DiagnoseClient({ username }: { username: string }) {
                 },
                 {
                   Icon: Sparkles,
-                  label: "Claude による総評",
+                  label: "AI による総評",
                   desc: "アカウント全体の発信傾向と感情プロファイルを文章で要約",
                 },
                 {

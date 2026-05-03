@@ -15,7 +15,7 @@ const features = [
     icon: Brain,
     title: "AI による投稿分類",
     description:
-      "直近の公開投稿を Claude AI で名誉毀損・侮辱・脅迫・プライバシー侵害の 4 カテゴリに自動分類。",
+      "直近の公開投稿を AI で名誉毀損・侮辱・脅迫・プライバシー侵害の 4 カテゴリに自動分類。",
     color: "text-blue-500",
     bg: "bg-blue-50",
   },
