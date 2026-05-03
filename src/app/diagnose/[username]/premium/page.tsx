@@ -162,19 +162,21 @@ function OwnershipMismatch({
           <li className="rounded-2xl border border-slate-200 bg-white p-4">
             <div className="flex items-center gap-2">
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 text-[11px] font-extrabold text-white">1</span>
-              <span className="text-[13px] font-bold text-foreground">X からログアウト</span>
+              <span className="text-[13px] font-bold text-foreground">
+                X で <span className="font-mono">@{target}</span> に切り替え
+              </span>
             </div>
             <p className="mt-1 pl-8 text-[11px] leading-relaxed text-text-muted">
-              新しいタブで X が開きます。<strong className="text-foreground">「ログアウト」をタップ</strong>してください。
+              新しいタブで X のログイン画面が開きます。<strong className="text-foreground"><span className="font-mono">@{target}</span> でログイン</strong>してください（既存セッションがある場合は一度サインアウトしてから再ログイン）。
             </p>
             <a
-              href="https://x.com/logout"
+              href="https://x.com/i/flow/login"
               target="_blank"
               rel="noopener noreferrer"
               className="mt-2 ml-8 inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-2 text-[12px] font-bold text-foreground hover:bg-slate-50 active:scale-[0.97]"
             >
               <LogOut className="h-3.5 w-3.5" />
-              X を開いてログアウト
+              X のログイン画面を開く
             </a>
           </li>
 
@@ -183,11 +185,11 @@ function OwnershipMismatch({
             <div className="flex items-center gap-2">
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 text-[11px] font-extrabold text-white">2</span>
               <span className="text-[13px] font-bold text-foreground">
-                <span className="font-mono">@{target}</span> でログインし直す
+                ここに戻って下のボタンをタップ
               </span>
             </div>
             <p className="mt-1 pl-8 text-[11px] leading-relaxed text-text-muted">
-              X のログイン画面で <strong className="font-mono text-foreground">@{target}</strong> を入力してログインしてから、下のボタンを押してください。
+              <span className="font-mono">@{target}</span> でログインできたら、このタブに戻って下のボタンを押してください。
             </p>
           </li>
         </ol>
