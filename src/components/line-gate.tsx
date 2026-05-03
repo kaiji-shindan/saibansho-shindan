@@ -169,18 +169,33 @@ export function LineGateCard({ username }: { username: string }) {
 
       {opened ? (
         <div className="mt-5 flex flex-col gap-2">
+          <div className="rounded-2xl border border-[#06c755]/30 bg-white/60 p-4 text-left">
+            <p className="flex items-center gap-1.5 text-[12px] font-extrabold text-[#06c755]">
+              <CheckCircle2 className="h-4 w-4" />
+              送信完了
+            </p>
+            <p className="mt-2 text-[13px] leading-relaxed text-foreground">
+              公式LINE のトーク画面に
+              <strong>@{username} の詳細レポートのURL</strong>
+              をお送りしました。
+              <br />
+              LINE を開いてご確認ください。
+            </p>
+          </div>
           <a
-            href={`/diagnose/${username}/premium`}
-            className="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#06c755] to-[#04a043] px-6 py-4 text-base font-extrabold text-white shadow-lg shadow-[#06c755]/30 active:scale-[0.97]"
+            href={getLineAddUrl()}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-1 flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#06c755] to-[#04a043] px-6 py-4 text-base font-extrabold text-white shadow-lg shadow-[#06c755]/30 active:scale-[0.97]"
           >
-            詳細レポートを開く
             <Image src="/icon_line.png" alt="" width={20} height={20} />
+            公式LINEを開く
           </a>
           <button
             onClick={onClick}
-            className="text-[11px] font-medium text-text-muted underline underline-offset-2"
+            className="mt-1 text-[11px] font-medium text-text-muted underline underline-offset-2"
           >
-            もう一度 LINE を開く
+            メッセージが届かない場合はこちら
           </button>
         </div>
       ) : (
@@ -193,7 +208,7 @@ export function LineGateCard({ username }: { username: string }) {
             LINEで詳細レポートを受け取る
           </button>
           <p className="mt-3 text-center text-[11px] text-text-muted">
-            ※ ボタンを押すと LINE が開き、同時に詳細レポートが閲覧できるようになります
+            ※ ボタンを押すと公式LINEが開きます。友だち追加するとトーク画面に詳細レポートのURLが届きます
           </p>
           <p className="mt-1 text-center text-[10px] text-text-muted">
             ※ 友だち追加により <a href="/privacy" className="underline">プライバシーポリシー</a> に同意したものとみなされます
