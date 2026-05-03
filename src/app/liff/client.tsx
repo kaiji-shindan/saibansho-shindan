@@ -243,7 +243,7 @@ export function LiffClient({ username: initialUsername }: { username: string }) 
             <a
               href={
                 process.env.NEXT_PUBLIC_LINE_ADD_FRIEND_URL ??
-                "https://line.me/R/ti/p/@example"
+                "https://lin.ee/SKMMS4PJ"
               }
               target="_blank"
               rel="noopener noreferrer"

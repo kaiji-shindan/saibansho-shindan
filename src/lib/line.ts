@@ -24,10 +24,10 @@ export const LINE_VERIFIED_STORAGE_KEY = "kaiji_line_opened_v1";
 /** Value both places use so we can cheaply check equality. */
 export const LINE_VERIFIED_VALUE = "1";
 
-/** Read the public LINE add-friend URL from env. Falls back to a placeholder so dev works. */
+/** Read the public LINE add-friend URL from env. Falls back to the production URL. */
 export function getLineAddUrl(): string {
   return (
     process.env.NEXT_PUBLIC_LINE_ADD_FRIEND_URL ??
-    "https://line.me/R/ti/p/@example"
+    "https://lin.ee/SKMMS4PJ"
   );
 }

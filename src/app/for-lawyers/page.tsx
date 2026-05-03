@@ -406,7 +406,7 @@ export default function ForLawyersPage() {
 
             <div className="mt-10 grid gap-4 sm:grid-cols-2">
               <a
-                href="https://line.me/R/ti/p/@example"
+                href="https://lin.ee/SKMMS4PJ"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#06c755] to-[#04a043] px-6 py-5 text-sm font-extrabold text-white shadow-xl shadow-[#06c755]/30 hover:opacity-90 active:scale-[0.97] sm:text-base"
