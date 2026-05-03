@@ -11,7 +11,7 @@
 //   6. 全て通過 → PremiumClient (詳細レポート)
 // ============================================================
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { LogIn, AlertCircle, LogOut, ArrowRight } from "lucide-react";
@@ -38,11 +38,18 @@ export default async function PremiumPage({
   }
 
   const cookieStore = await cookies();
+  const headersList = await headers();
+
+  // LINE 内ブラウザ判定: ボット URL からタップして開いた = すでに LINE 友だち
+  // 確定なので、LINE ゲートを無条件にスキップする。
+  const ua = headersList.get("user-agent") ?? "";
+  const isLineInAppBrowser = /\bLine\//i.test(ua);
 
   // ----- 1) LINE ゲート (最優先) -----
   // LINE 開封 cookie が無い場合は client に渡す。PremiumClient 内で
   // localStorage / cookie の両方をチェックして LineGateOverlay を出す。
   const lineOpened =
+    isLineInAppBrowser ||
     cookieStore.get(LINE_VERIFIED_COOKIE)?.value === LINE_VERIFIED_VALUE ||
     cookieStore.get(LINE_VERIFIED_COOKIE_LEGACY)?.value === LINE_VERIFIED_VALUE;
   if (!lineOpened) {
@@ -52,7 +59,7 @@ export default async function PremiumPage({
   // ----- 2) X OAuth ゲート (LINE 通過後) -----
   // X OAuth が未設定なら、ガード OFF（開発時のフォールバック）
   if (!isXOauthConfigured()) {
-    return <PremiumClient username={username} />;
+    return <PremiumClient username={username} initialLineVerified />;
   }
 
   const xHandle = cookieStore.get("kaiji_x_handle")?.value;
@@ -68,7 +75,7 @@ export default async function PremiumPage({
   }
 
   // 認証済 + 一致 → 通常表示
-  return <PremiumClient username={username} />;
+  return <PremiumClient username={username} initialLineVerified />;
 }
 
 // ============================================================

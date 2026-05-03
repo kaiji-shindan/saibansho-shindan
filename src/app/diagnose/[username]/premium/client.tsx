@@ -179,7 +179,18 @@ function isMockPreview(): boolean {
   return new URLSearchParams(window.location.search).get("mock") === "1";
 }
 
-export function PremiumClient({ username }: { username: string }) {
+export function PremiumClient({
+  username,
+  initialLineVerified = false,
+}: {
+  username: string;
+  /**
+   * Server から「LINE in-app browser から来た」と判定された場合に true。
+   * その場合は LINE ゲートをスキップする (ボット URL から開いている時点で
+   * すでに LINE 友だちのため、改めて誘導する必要が無い)。
+   */
+  initialLineVerified?: boolean;
+}) {
   const [data, setData] = useState<DiagnosisData | null>(null);
   const [error, setError] = useState<string | null>(null);
   // LINE gate: プレミアムコンテンツは LINE ゲート通過ユーザーのみに開放する。
@@ -190,22 +201,45 @@ export function PremiumClient({ username }: { username: string }) {
   const [lineVerified, setLineVerified] = useState<boolean | null>(() => {
     if (typeof window === "undefined") return null;
     if (isMockPreview()) return true;
+    if (initialLineVerified) return true;
     return isLineVerifiedClient();
   });
 
   // Cookie はタブをまたいだ外部イベントで変わる可能性があるので、
   // 戻ってきたときに再評価する (setState-in-effect ではなく外部イベント購読)。
-  // ?mock=1 の時はゲート判定そのものを無効化。
+  // ?mock=1 / initialLineVerified の時はゲート判定そのものを無効化。
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (isMockPreview()) return;
+    if (initialLineVerified) return;
     const onVisibility = () => {
       const next = isLineVerifiedClient();
       setLineVerified((prev) => (prev === next ? prev : next));
     };
     window.addEventListener("visibilitychange", onVisibility);
     return () => window.removeEventListener("visibilitychange", onVisibility);
-  }, []);
+  }, [initialLineVerified]);
+
+  // LINE in-app browser から来た場合は、cookie / localStorage にも
+  // フラグを書き込んでおく。LINE 内ブラウザからリンクをタップして
+  // 別のセッションに引き継がれたときに再ゲートで詰まらないようにする。
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!initialLineVerified) return;
+    if (isLineVerifiedClient()) return;
+    try {
+      window.localStorage.setItem("kaiji_line_opened_v1", "1");
+    } catch {
+      // localStorage may be blocked
+    }
+    // /api/lead/line-click は cookie もセットするので fire-and-forget で叩く
+    void fetch("/api/lead/line-click", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username }),
+      keepalive: true,
+    }).catch(() => {});
+  }, [initialLineVerified, username]);
 
   useEffect(() => {
     let cancelled = false;
