@@ -119,9 +119,14 @@ export default function PrivacyPage() {
             <td>180日</td>
           </tr>
           <tr>
-            <td>kaiji_line_verified</td>
+            <td>kaiji_line_opened</td>
             <td>LINE 登録状態の保持</td>
             <td>180日</td>
+          </tr>
+          <tr>
+            <td>kaiji_x_handle</td>
+            <td>X (Twitter) 本人認証ハンドルの保持</td>
+            <td>30日</td>
           </tr>
         </tbody>
       </table>

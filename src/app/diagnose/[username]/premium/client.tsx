@@ -220,9 +220,11 @@ export function PremiumClient({
     return () => window.removeEventListener("visibilitychange", onVisibility);
   }, [initialLineVerified]);
 
-  // LINE in-app browser から来た場合は、cookie / localStorage にも
-  // フラグを書き込んでおく。LINE 内ブラウザからリンクをタップして
-  // 別のセッションに引き継がれたときに再ゲートで詰まらないようにする。
+  // LINE in-app browser から来た場合は localStorage にもフラグを書き込む。
+  // /api/lead/line-click は呼ばない — line_click はそもそもボタンクリック
+  // (ユーザー意図) を記録するためのもので、ボット URL から自動遷移した
+  // 訪問で重複記録すると leads が水増しされる。LINE UA の訪問は webhook
+  // 側で「友だち追加」イベントとして既に記録済み。
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!initialLineVerified) return;
@@ -232,14 +234,7 @@ export function PremiumClient({
     } catch {
       // localStorage may be blocked
     }
-    // /api/lead/line-click は cookie もセットするので fire-and-forget で叩く
-    void fetch("/api/lead/line-click", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username }),
-      keepalive: true,
-    }).catch(() => {});
-  }, [initialLineVerified, username]);
+  }, [initialLineVerified]);
 
   useEffect(() => {
     let cancelled = false;

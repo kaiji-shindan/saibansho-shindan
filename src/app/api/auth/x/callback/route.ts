@@ -92,7 +92,7 @@ export async function GET(req: NextRequest) {
 
   notifyLead({
     kind: "x_oauth",
-    queryUsername: xUsername,
+    queryUsername: diagnoseTarget,
     sessionId: info.sessionId,
     ip: info.ip,
     userAgent: info.userAgent,

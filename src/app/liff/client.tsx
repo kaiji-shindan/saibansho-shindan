@@ -105,13 +105,34 @@ export function LiffClient({ username: initialUsername }: { username: string }) 
 
     const run = async () => {
       try {
-        // 1) Inject LIFF SDK if not present
+        // 1) Inject LIFF SDK if not present.
+        //    Strict Mode などで effect が二度走っても script tag が
+        //    重複挿入されないように、既存タグを優先利用する。
         if (!window.liff) {
           await new Promise<void>((resolve, reject) => {
+            const existing = document.querySelector<HTMLScriptElement>(
+              `script[src="${LIFF_SDK_SRC}"]`,
+            );
+            if (existing) {
+              if ((existing as HTMLScriptElement & { _loaded?: boolean })._loaded) {
+                resolve();
+              } else {
+                existing.addEventListener("load", () => resolve(), { once: true });
+                existing.addEventListener(
+                  "error",
+                  () => reject(new Error("LIFF SDK の読み込みに失敗しました")),
+                  { once: true },
+                );
+              }
+              return;
+            }
             const s = document.createElement("script");
             s.src = LIFF_SDK_SRC;
             s.charset = "utf-8";
-            s.onload = () => resolve();
+            s.onload = () => {
+              (s as HTMLScriptElement & { _loaded?: boolean })._loaded = true;
+              resolve();
+            };
             s.onerror = () => reject(new Error("LIFF SDK の読み込みに失敗しました"));
             document.head.appendChild(s);
           });

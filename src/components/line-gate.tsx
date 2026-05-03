@@ -226,10 +226,20 @@ export function LineGateOverlay({ username }: { username: string }) {
   const [, markOpened] = useLineOpened();
 
   const onClick = () => {
-    void openLineAndMarkOpened(username, markOpened);
-    setTimeout(() => {
+    // openLineAndMarkOpened の fetch が cookie をセットするので、
+    // それが完了してから reload する。失敗しても UX を止めないように
+    // 上限 2.5 秒のタイムアウトでフォールバック。
+    let reloaded = false;
+    const doReload = () => {
+      if (reloaded) return;
+      reloaded = true;
       if (typeof window !== "undefined") window.location.reload();
-    }, 600);
+    };
+    const fallback = setTimeout(doReload, 2500);
+    void openLineAndMarkOpened(username, markOpened).finally(() => {
+      clearTimeout(fallback);
+      doReload();
+    });
   };
 
   return (

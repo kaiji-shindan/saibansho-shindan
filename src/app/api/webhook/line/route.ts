@@ -96,8 +96,8 @@ async function handleEvent(event: LineEvent) {
     lineUserId: userId,
   }).catch(() => {});
 
-  // Cleanup the pending link after successful delivery.
-  if (kind === "with_username") {
-    await deletePendingLink(userId);
-  }
+  // Cleanup the pending link after successful delivery — kind に依らず削除。
+  // 残しておくと再 follow 時に古い対象で再送される / TTL 任せでテーブルが
+  // 肥大化する。pending が存在しなかった場合は no-op。
+  await deletePendingLink(userId);
 }
