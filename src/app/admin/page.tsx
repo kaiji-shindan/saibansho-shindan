@@ -228,7 +228,20 @@ export default async function AdminDashboardPage() {
               )}
               {recentDiagnose.map((r) => (
                 <tr key={r.id} className="border-t border-slate-100">
-                  <td className="px-4 py-2 font-mono font-bold text-slate-800">@{r.query_username ?? "-"}</td>
+                  <td className="px-4 py-2 font-mono font-bold text-slate-800">
+                    {r.query_username ? (
+                      <a
+                        href={`https://x.com/${r.query_username}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:underline"
+                      >
+                        @{r.query_username}
+                      </a>
+                    ) : (
+                      "-"
+                    )}
+                  </td>
                   <td className="px-4 py-2 font-mono text-[10px] text-slate-500">
                     {r.session_id ? r.session_id.slice(0, 10) + "…" : "-"}
                   </td>
@@ -266,7 +279,18 @@ export default async function AdminDashboardPage() {
               {recentXOauth.map((r) => (
                 <tr key={r.id} className="border-t border-slate-100">
                   <td className="px-4 py-2 font-mono font-bold text-slate-800">
-                    {r.query_username ? `@${r.query_username}` : "-"}
+                    {r.query_username ? (
+                      <a
+                        href={`https://x.com/${r.query_username}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:underline"
+                      >
+                        @{r.query_username}
+                      </a>
+                    ) : (
+                      "-"
+                    )}
                   </td>
                   <td className="px-4 py-2 font-mono text-[10px] text-slate-500">{r.x_user_id ?? "-"}</td>
                   <td className="px-4 py-2 font-mono text-[10px] text-slate-500">
@@ -304,7 +328,18 @@ export default async function AdminDashboardPage() {
               {recentLine.map((r) => (
                 <tr key={r.id} className="border-t border-slate-100">
                   <td className="px-4 py-2 font-mono font-bold text-slate-800">
-                    {r.query_username ? `@${r.query_username}` : "-"}
+                    {r.query_username ? (
+                      <a
+                        href={`https://x.com/${r.query_username}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:underline"
+                      >
+                        @{r.query_username}
+                      </a>
+                    ) : (
+                      "-"
+                    )}
                   </td>
                   <td className="px-4 py-2 font-mono text-[10px] text-slate-500">
                     {r.session_id ? r.session_id.slice(0, 10) + "…" : "-"}

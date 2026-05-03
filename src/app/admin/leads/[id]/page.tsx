@@ -92,7 +92,21 @@ export default async function LeadDetailPage({
       <section>
         <h2 className="text-sm font-extrabold">基本情報</h2>
         <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <Field label="Xアカウント" value={lead.query_username ? `@${lead.query_username}` : null} />
+          <div className="rounded-lg border border-slate-200 bg-white p-3">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Xアカウント</p>
+            {lead.query_username ? (
+              <a
+                href={`https://x.com/${lead.query_username}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1 block break-all font-mono text-xs font-bold text-violet-700 hover:underline"
+              >
+                @{lead.query_username} ↗
+              </a>
+            ) : (
+              <p className="mt-1 break-all font-mono text-xs text-slate-400">—</p>
+            )}
+          </div>
           <Field label="Session ID" value={lead.session_id} />
           <Field label="IP" value={lead.ip} />
           <Field label="User Agent" value={lead.user_agent} />
@@ -151,7 +165,18 @@ export default async function LeadDetailPage({
                     </span>
                   </td>
                   <td className="px-4 py-2 font-mono font-bold">
-                    {t.query_username ? `@${t.query_username}` : "-"}
+                    {t.query_username ? (
+                      <a
+                        href={`https://x.com/${t.query_username}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:underline"
+                      >
+                        @{t.query_username}
+                      </a>
+                    ) : (
+                      "-"
+                    )}
                   </td>
                   <td className="px-4 py-2 whitespace-nowrap text-slate-500">
                     {fmtJst(t.created_at)}

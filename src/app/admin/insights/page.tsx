@@ -248,34 +248,46 @@ export default async function InsightsPage({
               const style = CLUSTER_STYLE[tier];
               const profile = profiles.get(row.username);
               return (
-                <Link
+                <div
                   key={row.username}
-                  href={`/admin/leads?username=${encodeURIComponent(row.username)}`}
-                  className={`flex items-center gap-3 rounded-xl border border-white/80 bg-white/90 p-3 shadow-sm transition hover:bg-white`}
+                  className="flex items-center gap-3 rounded-xl border border-white/80 bg-white/90 p-3 shadow-sm"
                 >
-                  <Image
-                    src={profile?.profileImageUrl ?? `https://unavatar.io/x/${row.username}`}
-                    alt={`@${row.username}`}
-                    width={36}
-                    height={36}
-                    className="h-9 w-9 shrink-0 rounded-full object-cover"
-                    unoptimized
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="flex items-center gap-1.5">
-                      <span className="truncate font-extrabold">
-                        {profile?.displayName?.trim() || `@${row.username}`}
-                      </span>
-                      <span className={`rounded-md px-1.5 py-0.5 text-[9px] font-extrabold ${style.badgeBg} ${style.badgeText}`}>
-                        {style.label}
-                      </span>
-                    </p>
-                    <p className="truncate text-[11px] text-slate-500">
-                      <Users className="mr-0.5 inline h-2.5 w-2.5" />
-                      {row.uniqueSessions} 名から診断 / 計 {row.diagnoseCount} 件
-                    </p>
-                  </div>
-                </Link>
+                  <a
+                    href={`https://x.com/${row.username}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex min-w-0 flex-1 items-center gap-3 hover:opacity-90"
+                  >
+                    <Image
+                      src={profile?.profileImageUrl ?? `https://unavatar.io/x/${row.username}`}
+                      alt={`@${row.username}`}
+                      width={36}
+                      height={36}
+                      className="h-9 w-9 shrink-0 rounded-full object-cover"
+                      unoptimized
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="flex items-center gap-1.5">
+                        <span className="truncate font-extrabold hover:underline">
+                          {profile?.displayName?.trim() || `@${row.username}`}
+                        </span>
+                        <span className={`rounded-md px-1.5 py-0.5 text-[9px] font-extrabold ${style.badgeBg} ${style.badgeText}`}>
+                          {style.label}
+                        </span>
+                      </p>
+                      <p className="truncate text-[11px] text-slate-500">
+                        <Users className="mr-0.5 inline h-2.5 w-2.5" />
+                        {row.uniqueSessions} 名から診断 / 計 {row.diagnoseCount} 件
+                      </p>
+                    </div>
+                  </a>
+                  <Link
+                    href={`/admin/leads?username=${encodeURIComponent(row.username)}`}
+                    className="shrink-0 text-[10px] font-bold text-violet-600 hover:underline"
+                  >
+                    詳細→
+                  </Link>
+                </div>
               );
             })}
           </div>
@@ -393,7 +405,13 @@ function RankRow({
     <tr className={`border-t border-slate-100 ${cluster?.rowBg ?? ""}`}>
       <td className="px-4 py-3 font-mono text-slate-400">{idx}</td>
       <td className="px-4 py-3">
-        <div className="flex items-center gap-2.5">
+        <a
+          href={`https://x.com/${handle}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2.5 hover:opacity-90"
+          title={`@${handle} を X で開く`}
+        >
           <Image
             src={avatar}
             alt={`@${handle}`}
@@ -404,7 +422,7 @@ function RankRow({
           />
           <div className="min-w-0">
             <p className="flex items-center gap-1.5">
-              <span className="truncate font-extrabold">{display}</span>
+              <span className="truncate font-extrabold hover:underline">{display}</span>
               <span
                 className={`rounded-md px-1.5 py-0.5 text-[9px] font-extrabold ${cat.badgeBg} ${cat.badgeText}`}
                 title={`${cat.label}: ${cat.criterion}`}
@@ -421,7 +439,7 @@ function RankRow({
             </p>
             <p className="truncate font-mono text-[11px] text-slate-500">@{handle}</p>
           </div>
-        </div>
+        </a>
       </td>
       <td className="whitespace-nowrap px-4 py-3 text-sm font-extrabold text-violet-700">
         {fmtNum(row.diagnoseCount)}
