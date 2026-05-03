@@ -1,10 +1,14 @@
 // ============================================================
 // /diagnose/[username]/premium — server entry
 //
-// Server-side X OAuth gate:
-//   - 未認証 → /api/auth/x/start にリダイレクト
-//   - 別人の X でログイン中 → 所有者不一致 UI を表示（再ログイン誘導）
-//   - 認証済み + 所有者一致 → PremiumClient をレンダリング
+// ゲートの順番 (LINE → X 本人認証):
+//   1. ?mock=1 → 全ガード bypass (admin プレビュー)
+//   2. LINE 未開封 → PremiumClient に委譲し、client 側で LineGateOverlay 表示
+//      (LINE 登録は何より先に取りたいリード獲得チャネルなので最優先)
+//   3. X OAuth が未設定 → ガード OFF (開発フォールバック)
+//   4. X 未認証 → XAuthRequired を表示
+//   5. 別人ログイン → OwnershipMismatch を表示 (アカウント切替誘導)
+//   6. 全て通過 → PremiumClient (詳細レポート)
 // ============================================================
 
 import { cookies } from "next/headers";
@@ -13,6 +17,7 @@ import Link from "next/link";
 import { LogIn, AlertCircle, LogOut, ArrowRight } from "lucide-react";
 import { PremiumClient } from "./client";
 import { isXOauthConfigured } from "@/lib/x-oauth";
+import { LINE_VERIFIED_COOKIE, LINE_VERIFIED_COOKIE_LEGACY, LINE_VERIFIED_VALUE } from "@/lib/line";
 
 export const dynamic = "force-dynamic";
 
@@ -26,22 +31,33 @@ export default async function PremiumPage({
   const { username } = await params;
   const sp = await searchParams;
 
-  // ?mock=1 は admin の UI プレビュー用。X OAuth ガードをスキップして
-  // モックデータでそのまま表示する（PremiumClient 内で /api/diagnose?mock=1
-  // が呼ばれるため、X / Anthropic / Supabase は一切叩かれない）。
+  // ?mock=1 は admin の UI プレビュー用。全ガードをスキップして
+  // モックデータでそのまま表示する。
   if (sp.mock === "1") {
     return <PremiumClient username={username} />;
   }
 
   const cookieStore = await cookies();
-  const xHandle = cookieStore.get("kaiji_x_handle")?.value;
 
+  // ----- 1) LINE ゲート (最優先) -----
+  // LINE 開封 cookie が無い場合は client に渡す。PremiumClient 内で
+  // localStorage / cookie の両方をチェックして LineGateOverlay を出す。
+  const lineOpened =
+    cookieStore.get(LINE_VERIFIED_COOKIE)?.value === LINE_VERIFIED_VALUE ||
+    cookieStore.get(LINE_VERIFIED_COOKIE_LEGACY)?.value === LINE_VERIFIED_VALUE;
+  if (!lineOpened) {
+    return <PremiumClient username={username} />;
+  }
+
+  // ----- 2) X OAuth ゲート (LINE 通過後) -----
   // X OAuth が未設定なら、ガード OFF（開発時のフォールバック）
   if (!isXOauthConfigured()) {
     return <PremiumClient username={username} />;
   }
 
-  // 未ログイン → X OAuth へ
+  const xHandle = cookieStore.get("kaiji_x_handle")?.value;
+
+  // 未ログイン → X 認証 UI
   if (!xHandle) {
     return <XAuthRequired username={username} />;
   }
