@@ -10,7 +10,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { LogIn, AlertCircle } from "lucide-react";
+import { LogIn, AlertCircle, LogOut, ArrowRight } from "lucide-react";
 import { PremiumClient } from "./client";
 import { isXOauthConfigured } from "@/lib/x-oauth";
 
@@ -109,6 +109,13 @@ function XAuthRequired({ username }: { username: string }) {
 
 // ============================================================
 // 別人の X でログイン中の UI
+//
+// 動線設計の前提:
+//   ブラウザ (Safari 等) に @authedAs の X セッションが残っている状態。
+//   そのまま OAuth に飛ばしても X が同じセッションで自動承認するため、
+//   何度押しても同じハンドルが返ってきてループする。
+//   → 「Safari の X から一度ログアウト → 本人で再ログイン → 戻って再連携」
+//      という 2 ステップを明示的に提示する。
 // ============================================================
 function OwnershipMismatch({
   authedAs,
@@ -141,18 +148,57 @@ function OwnershipMismatch({
             <p className="mt-0.5 font-mono text-sm font-bold text-amber-700">@{target}</p>
           </div>
         </div>
-        <p className="mt-4 text-sm leading-relaxed text-text-sub">
-          詳細レポートはアカウント本人のみが閲覧できます。
+
+        <p className="mt-4 text-left text-[13px] leading-relaxed text-text-sub">
+          ブラウザに <strong className="font-mono text-foreground">@{authedAs}</strong> のログインが残っているため、
+          そのまま再連携しても同じアカウントが返ってきます。
           <br />
-          <strong className="text-foreground">@{target}</strong> としてログインし直してください。
+          下の手順で <strong className="font-mono text-foreground">@{target}</strong> に切り替えてください。
         </p>
+
+        {/* ----- 2 step flow ----- */}
+        <ol className="mt-5 space-y-3 text-left">
+          {/* Step 1 */}
+          <li className="rounded-2xl border border-slate-200 bg-white p-4">
+            <div className="flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 text-[11px] font-extrabold text-white">1</span>
+              <span className="text-[13px] font-bold text-foreground">X からログアウト</span>
+            </div>
+            <p className="mt-1 pl-8 text-[11px] leading-relaxed text-text-muted">
+              新しいタブで X が開きます。<strong className="text-foreground">「ログアウト」をタップ</strong>してください。
+            </p>
+            <a
+              href="https://x.com/logout"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 ml-8 inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-2 text-[12px] font-bold text-foreground hover:bg-slate-50 active:scale-[0.97]"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              X を開いてログアウト
+            </a>
+          </li>
+
+          {/* Step 2 */}
+          <li className="rounded-2xl border border-slate-200 bg-white p-4">
+            <div className="flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 text-[11px] font-extrabold text-white">2</span>
+              <span className="text-[13px] font-bold text-foreground">
+                <span className="font-mono">@{target}</span> でログインし直す
+              </span>
+            </div>
+            <p className="mt-1 pl-8 text-[11px] leading-relaxed text-text-muted">
+              X のログイン画面で <strong className="font-mono text-foreground">@{target}</strong> を入力してログインしてから、下のボタンを押してください。
+            </p>
+          </li>
+        </ol>
 
         <a
           href={`/api/auth/x/start?return=${encodeURIComponent(returnTo)}`}
-          className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-6 py-4 text-base font-extrabold text-white shadow-lg shadow-slate-900/30 hover:opacity-90 active:scale-[0.97]"
+          className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-6 py-4 text-base font-extrabold text-white shadow-lg shadow-slate-900/30 hover:opacity-90 active:scale-[0.97]"
         >
           <span className="text-lg leading-none">𝕏</span>
-          別の X アカウントでログインする
+          <span className="font-mono">@{target}</span> で続ける
+          <ArrowRight className="h-4 w-4" />
         </a>
 
         <Link
