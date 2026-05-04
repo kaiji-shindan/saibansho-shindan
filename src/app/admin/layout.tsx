@@ -59,13 +59,6 @@ export default function AdminLayout({
                 <BarChart3 className="h-4 w-4" />
                 インサイト
               </Link>
-              <a
-                href="/admin/leads.csv"
-                className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-900"
-              >
-                <FileDown className="h-4 w-4" />
-                CSV エクスポート
-              </a>
               <Link
                 href="/admin/preview"
                 className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-900"
@@ -74,6 +67,18 @@ export default function AdminLayout({
                 UI プレビュー
               </Link>
             </nav>
+
+            {/* Utility: CSV export — メインナビから離して誤タップを防止 */}
+            <div className="border-t border-slate-200 px-3 py-3">
+              <a
+                href="/admin/leads.csv"
+                download
+                className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-[11px] font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+              >
+                <FileDown className="h-3.5 w-3.5" />
+                CSV エクスポート
+              </a>
+            </div>
 
             {/* Footer note */}
             <div className="border-t border-slate-200 px-5 py-3 text-[10px] text-slate-500">
