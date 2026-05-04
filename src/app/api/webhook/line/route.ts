@@ -20,6 +20,7 @@ import {
   getPendingLink,
 } from "@/lib/line-pending";
 import { recordLead } from "@/lib/leads";
+import { isValidXUsername } from "@/lib/parse-username";
 
 export const runtime = "nodejs";
 
@@ -71,11 +72,18 @@ async function handleEvent(event: LineEvent) {
   const pending = await getPendingLink(userId);
   const siteUrl = getPublicSiteUrl();
 
+  // レガシーで line_pending_links に不正 username (全角等) が残っている可能性を考慮し
+  // ここでも防衛する。register-pending 側では既に弾いているので新規データは入らない。
+  const safePendingUsername =
+    pending?.pending_username && isValidXUsername(pending.pending_username)
+      ? pending.pending_username
+      : null;
+
   let messages: unknown[];
   let kind: "with_username" | "generic";
 
-  if (pending?.pending_username) {
-    messages = buildFollowMessages(pending.pending_username, siteUrl);
+  if (safePendingUsername) {
+    messages = buildFollowMessages(safePendingUsername, siteUrl);
     kind = "with_username";
   } else {
     messages = buildGenericGreetingMessages(siteUrl);
@@ -91,7 +99,7 @@ async function handleEvent(event: LineEvent) {
   // Track the registration in leads for the admin dashboard.
   recordLead({
     kind: "line_registered",
-    queryUsername: pending?.pending_username ?? null,
+    queryUsername: safePendingUsername,
     sessionId: null,
     lineUserId: userId,
   }).catch(() => {});

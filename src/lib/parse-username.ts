@@ -24,3 +24,10 @@ export function parseUsername(input: string): string {
   // @username or plain username
   return trimmed.replace(/^@/, "");
 }
+
+// X 公式仕様: 半角英数字とアンダースコア、1〜15文字
+const X_USERNAME_RE = /^[A-Za-z0-9_]{1,15}$/;
+
+export function isValidXUsername(s: string): boolean {
+  return X_USERNAME_RE.test(s);
+}

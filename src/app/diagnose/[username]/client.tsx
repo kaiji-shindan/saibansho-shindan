@@ -34,7 +34,7 @@ import { AccountProfileCard } from "@/components/account-profile";
 import { AccountAnalysisCard } from "@/components/account-analysis";
 import { LineGateCard } from "@/components/line-gate";
 import { AttributionCapture } from "@/components/attribution-capture";
-import { parseUsername } from "@/lib/parse-username";
+import { parseUsername, isValidXUsername } from "@/lib/parse-username";
 import type { DiagnosisData, CategoryName } from "@/lib/diagnose-types";
 
 // Map category names → icon/color metadata for the client UI.
@@ -155,6 +155,7 @@ export function DiagnoseClient({ username }: { username: string }) {
   const [result, setResult] = useState<DiagnosisResult | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [newUsername, setNewUsername] = useState("");
+  const [newError, setNewError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -210,11 +211,18 @@ export function DiagnoseClient({ username }: { username: string }) {
   const handleNewSearch = (e: React.FormEvent) => {
     e.preventDefault();
     const cleaned = parseUsername(newUsername);
-    if (cleaned) {
-      setPhase("loading");
-      setResult(null);
-      router.push(`/diagnose/${cleaned}`);
+    if (!cleaned) {
+      setNewError("ユーザー名を入力してください");
+      return;
     }
+    if (!isValidXUsername(cleaned)) {
+      setNewError("半角英数字とアンダースコア（1〜15文字）で入力してください");
+      return;
+    }
+    setNewError(null);
+    setPhase("loading");
+    setResult(null);
+    router.push(`/diagnose/${cleaned}`);
   };
 
   // ============================
@@ -808,13 +816,31 @@ export function DiagnoseClient({ username }: { username: string }) {
           <form onSubmit={handleNewSearch} className="mx-auto mt-4 max-w-sm">
             <div className="flex items-center rounded-2xl border-2 border-border bg-surface p-1.5 transition-all focus-within:border-violet-300">
               <span className="pl-3 text-lg font-bold text-text-muted/50">@</span>
-              <input type="text" value={newUsername} onChange={(e) => setNewUsername(e.target.value)}
-                placeholder="ユーザー名" className="flex-1 bg-transparent px-2 py-3 text-base outline-none placeholder:text-text-muted/50" />
+              <input
+                type="text"
+                value={newUsername}
+                onChange={(e) => {
+                  setNewUsername(e.target.value);
+                  if (newError) setNewError(null);
+                }}
+                inputMode="email"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                placeholder="例: your_handle"
+                aria-invalid={newError ? true : undefined}
+                className="flex-1 bg-transparent px-2 py-3 text-base outline-none placeholder:text-text-muted/50"
+              />
               <button type="submit"
                 className="rounded-xl bg-gradient-to-r from-violet-400 to-indigo-400 px-5 py-3 text-sm font-extrabold text-white hover:from-violet-500 hover:to-indigo-500 active:scale-[0.97]">
                 診断
               </button>
             </div>
+            {newError && (
+              <p role="alert" className="mt-2 text-left text-sm text-rose-500">
+                {newError}
+              </p>
+            )}
           </form>
         </div>
 

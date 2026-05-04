@@ -13,6 +13,7 @@ import { diagnose, DiagnoseConfigError } from "@/lib/diagnose";
 import type { DiagnosisResponse } from "@/lib/diagnose-types";
 import { recordLead, extractClientInfo } from "@/lib/leads";
 import { applyDiagnoseRateLimit } from "@/lib/rate-limit";
+import { isValidXUsername } from "@/lib/parse-username";
 
 export const runtime = "nodejs";
 
@@ -56,6 +57,22 @@ export async function GET(
   const { sid, isNew } = ensureSessionId(req);
   const info = extractClientInfo(req);
 
+  // ----- 入力検証: X 公式仕様 (半角英数字 + アンダースコア、1〜15文字) -----
+  // 全角日本語などをハンドルとして弾き、存在しないアカウントの診断記録を防ぐ。
+  const normalizedUsername = username.replace(/^@/, "").trim();
+  if (!isValidXUsername(normalizedUsername)) {
+    const res = NextResponse.json<DiagnosisResponse>(
+      {
+        ok: false,
+        error:
+          "X のユーザー名は半角英数字とアンダースコア（1〜15文字）で指定してください。",
+      },
+      { status: 400 },
+    );
+    if (isNew) setSidCookie(res, sid);
+    return res;
+  }
+
   // ----- Rate limit (IP ベース) -----
   const rlIp = info.ip ?? "unknown";
   const rl = applyDiagnoseRateLimit(rlIp);
@@ -71,26 +88,28 @@ export async function GET(
     return res;
   }
 
-  // mock リクエストはリードに記録しない (実在しない診断を B2B 資産に混ぜないため)
-  if (!forceMock) {
-    recordLead({
-      kind: "diagnose",
-      queryUsername: username,
-      sessionId: sid,
-      ip: info.ip,
-      userAgent: info.userAgent,
-      referrer: info.referrer,
-      utmSource: info.utmSource,
-      utmMedium: info.utmMedium,
-      utmCampaign: info.utmCampaign,
-      utmContent: info.utmContent,
-      utmTerm: info.utmTerm,
-      landingPath: info.landingPath,
-    }).catch(() => {});
-  }
-
   try {
-    const data = await diagnose(username, { forceMock, noCache });
+    const data = await diagnose(normalizedUsername, { forceMock, noCache });
+
+    // 診断成功時のみリード記録 (X 上に存在しない / 取得失敗のものを B2B 資産に混ぜない)。
+    // mock リクエストも記録しない (架空の診断データのため)。
+    if (!forceMock) {
+      recordLead({
+        kind: "diagnose",
+        queryUsername: normalizedUsername,
+        sessionId: sid,
+        ip: info.ip,
+        userAgent: info.userAgent,
+        referrer: info.referrer,
+        utmSource: info.utmSource,
+        utmMedium: info.utmMedium,
+        utmCampaign: info.utmCampaign,
+        utmContent: info.utmContent,
+        utmTerm: info.utmTerm,
+        landingPath: info.landingPath,
+      }).catch(() => {});
+    }
+
     const res = NextResponse.json({ ok: true, data });
     if (isNew) setSidCookie(res, sid);
     return res;

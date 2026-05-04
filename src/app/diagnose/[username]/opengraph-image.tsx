@@ -2,9 +2,11 @@
 // Dynamic OG image per diagnosed username
 // 結果ページが X シェアされたときに "@username のリスク" を
 // サムネで見せてクリック率を上げる。
+// 不正な username (全角等) の場合は @ を出さない汎用版にフォールバック。
 // ============================================================
 
 import { ImageResponse } from "next/og";
+import { isValidXUsername } from "@/lib/parse-username";
 
 export const runtime = "nodejs";
 export const alt = "開示請求診断 — 結果レポート";
@@ -16,7 +18,8 @@ export default async function Image({
 }: {
   params: { username: string };
 }) {
-  const username = decodeURIComponent(params.username).slice(0, 32);
+  const raw = decodeURIComponent(params.username).replace(/^@/, "");
+  const validUsername = isValidXUsername(raw) ? raw : null;
 
   return new ImageResponse(
     (
@@ -59,20 +62,35 @@ export default async function Image({
         {/* Username + verdict */}
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div style={{ display: "flex", fontSize: 36, color: "#94a3b8", fontWeight: 600 }}>
-            診断対象アカウント
+            {validUsername ? "診断対象アカウント" : "Xアカウントの開示請求レベルを判定"}
           </div>
-          <div
-            style={{
-              display: "flex",
-              fontSize: 92,
-              fontWeight: 900,
-              lineHeight: 1,
-              letterSpacing: -2,
-              color: "#a78bfa",
-            }}
-          >
-            @{username}
-          </div>
+          {validUsername ? (
+            <div
+              style={{
+                display: "flex",
+                fontSize: 92,
+                fontWeight: 900,
+                lineHeight: 1,
+                letterSpacing: -2,
+                color: "#a78bfa",
+              }}
+            >
+              @{validUsername}
+            </div>
+          ) : (
+            <div
+              style={{
+                display: "flex",
+                fontSize: 72,
+                fontWeight: 900,
+                lineHeight: 1.1,
+                letterSpacing: -2,
+                color: "#a78bfa",
+              }}
+            >
+              その誹謗中傷、開示請求かも？
+            </div>
+          )}
           <div
             style={{
               display: "flex",
@@ -82,7 +100,9 @@ export default async function Image({
               color: "#f87171",
             }}
           >
-            開示請求レベルを分析しました
+            {validUsername
+              ? "開示請求レベルを分析しました"
+              : "公開投稿をAIで分析・無料診断"}
           </div>
         </div>
 

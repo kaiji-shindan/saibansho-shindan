@@ -3,18 +3,26 @@
 import { useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { parseUsername } from "@/lib/parse-username";
+import { parseUsername, isValidXUsername } from "@/lib/parse-username";
 
 export function Hero() {
   const [username, setUsername] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const cleaned = parseUsername(username);
-    if (cleaned) {
-      router.push(`/diagnose/${cleaned}`);
+    if (!cleaned) {
+      setError("ユーザー名を入力してください");
+      return;
     }
+    if (!isValidXUsername(cleaned)) {
+      setError("半角英数字とアンダースコア（1〜15文字）で入力してください");
+      return;
+    }
+    setError(null);
+    router.push(`/diagnose/${cleaned}`);
   };
 
   return (
@@ -146,8 +154,16 @@ export function Hero() {
             <input
               type="text"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="ユーザー名 または URL を入力"
+              onChange={(e) => {
+                setUsername(e.target.value);
+                if (error) setError(null);
+              }}
+              inputMode="email"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              placeholder="半角英数字で入力（例: your_handle）"
+              aria-invalid={error ? true : undefined}
               className="flex-1 bg-transparent px-2 py-3 text-lg text-white outline-none placeholder:text-slate-500"
             />
             <button
@@ -158,6 +174,14 @@ export function Hero() {
               <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
             </button>
           </div>
+          {error && (
+            <p
+              role="alert"
+              className="mt-2 px-2 text-left text-sm text-rose-300"
+            >
+              {error}
+            </p>
+          )}
         </form>
 
         {/* Social proof */}

@@ -17,6 +17,7 @@ import {
 } from "@/lib/x-oauth";
 import { extractClientInfo, recordLead } from "@/lib/leads";
 import { notifyLead } from "@/lib/notify";
+import { isValidXUsername } from "@/lib/parse-username";
 
 export const runtime = "nodejs";
 
@@ -62,11 +63,15 @@ export async function GET(req: NextRequest) {
 
   // ----- Extract the diagnose target from returnTo path -----
   // returnTo は通常 "/diagnose/<target>/premium..." の形なので、ここから対象を抜く。
-  // 取れなければ null (歴史的にこの時点では取れていなかった)。
+  // X 公式仕様 (^[A-Za-z0-9_]{1,15}$) に合わない場合は null に落として
+  // 不正な username が leads に混入しないようにする。
   let diagnoseTarget: string | null = null;
   try {
     const m = returnTo.match(/^\/diagnose\/([^\/?#]+)(?:\/|$|\?|#)/);
-    if (m) diagnoseTarget = decodeURIComponent(m[1]).replace(/^@/, "");
+    if (m) {
+      const candidate = decodeURIComponent(m[1]).replace(/^@/, "");
+      if (isValidXUsername(candidate)) diagnoseTarget = candidate;
+    }
   } catch { /* ignore */ }
 
   // ----- Record the lead -----

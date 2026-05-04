@@ -16,6 +16,7 @@ import {
   savePendingLink,
   deletePendingLink,
 } from "@/lib/line-pending";
+import { isValidXUsername } from "@/lib/parse-username";
 
 export const runtime = "nodejs";
 
@@ -28,10 +29,19 @@ export async function POST(req: NextRequest) {
   }
 
   const userId = body.userId?.trim();
-  const username = body.username?.trim();
+  const username = body.username?.trim().replace(/^@/, "");
   if (!userId || !username) {
     return NextResponse.json(
       { ok: false, error: "userId and username required" },
+      { status: 400 },
+    );
+  }
+
+  // 全角等の不正 username を弾く: ここを通すと line_pending_links に
+  // 混入し、follow webhook で LINE に "@さざえ125 さん" のように送信される。
+  if (!isValidXUsername(username)) {
+    return NextResponse.json(
+      { ok: false, error: "invalid username format" },
       { status: 400 },
     );
   }

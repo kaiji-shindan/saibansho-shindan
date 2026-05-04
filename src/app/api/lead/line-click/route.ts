@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { recordLead, extractClientInfo } from "@/lib/leads";
 import { notifyLead } from "@/lib/notify";
 import { LINE_VERIFIED_COOKIE, LINE_VERIFIED_VALUE } from "@/lib/line";
+import { isValidXUsername } from "@/lib/parse-username";
 
 export const runtime = "nodejs";
 
@@ -23,9 +24,15 @@ export async function POST(req: NextRequest) {
 
   const info = extractClientInfo(req);
 
+  // クリック自体はリードとして記録するが、不正な username (全角等) は
+  // 落として B2B 資産が汚れないようにする。
+  const safeUsername = body.username && isValidXUsername(body.username)
+    ? body.username
+    : null;
+
   recordLead({
     kind: "line_click",
-    queryUsername: body.username ?? null,
+    queryUsername: safeUsername,
     sessionId: info.sessionId,
     ip: info.ip,
     userAgent: info.userAgent,
@@ -42,7 +49,7 @@ export async function POST(req: NextRequest) {
   // LINE トークに新着が来る前に把握できるように。
   notifyLead({
     kind: "line_click",
-    queryUsername: body.username ?? null,
+    queryUsername: safeUsername,
     sessionId: info.sessionId,
     ip: info.ip,
     userAgent: info.userAgent,
